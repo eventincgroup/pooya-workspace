@@ -1,0 +1,7 @@
+.DS_Store
+
+# Ignore all direct subdirectories
+/*/
+
+# Un-ignore opencode agent dir
+!/.opencode/
