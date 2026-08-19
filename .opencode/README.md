@@ -95,11 +95,11 @@ flowchart TD
         SP["slice-planner<br/>(single pass — sees whole spec + plan)"]
         SP --> Slices["Dependency-ordered slices,<br/>each tagged single- or cross-repo"]
         Slices --> IW["issue-writer subagents<br/>(parallel — one per slice)"]
-        IW --> CreateIssues[["Create Linear issues,<br/>linked + dependency-ordered"]]
+        IW --> CreateIssues[["Create Linear issues:<br/>scope + references only,<br/>dependency-ordered"]]
     end
 ```
 
-`plan-project` is the sole orchestrator for its own flow — it owns every Linear read/write and every conversation with you; its five subagents never touch Linear or talk to you directly, they're pure reasoning agents fed content and returning a draft plus open questions. Spec drafting (`spec-drafter`) is repo-agnostic and fully resolved before technical planning (`repo-scout` × N in parallel, then `plan-synthesizer`) starts. Task breakdown deliberately runs `slice-planner` once over the *whole* plan (not fanned out) so a slice needing both `eventinc` and `nexus` stays one issue, then `issue-writer` fans out safely per slice since they're independent by then.
+`plan-project` is the sole orchestrator for its own flow — it owns every Linear read/write and every conversation with you; its five subagents never touch Linear or talk to you directly, they're pure reasoning agents fed content and returning a draft plus open questions. Spec drafting (`spec-drafter`) is repo-agnostic and fully resolved before technical planning (`repo-scout` × N in parallel, then `plan-synthesizer`) starts. Task breakdown deliberately runs `slice-planner` once over the *whole* plan (not fanned out) so a slice needing both `eventinc` and `nexus` stays one issue, then `issue-writer` fans out safely per slice since they're independent by then. Issues themselves carry only scope and a precise pointer to the relevant Spec/Plan sections — never the acceptance criteria or execution steps themselves, so the docs stay the single source of truth and an issue can't go stale if a doc is revised later.
 
 ## Agents at a glance
 
@@ -114,7 +114,7 @@ flowchart TD
 | `repo-scout` | `subagent` | `plan-project` | Judges one repo's relevance to the spec + Technical Design | Only `read`/`glob`/`grep` allowed |
 | `plan-synthesizer` | `subagent` | `plan-project` | Merges scout reports into the cross-repo plan | Same restricted set as `spec-drafter` |
 | `slice-planner` | `subagent` | `plan-project` | Single-pass vertical-slice breakdown | Same restricted set as `spec-drafter` |
-| `issue-writer` | `subagent` | `plan-project` | Formats one slice into a Linear issue | Same restricted set as `spec-drafter` |
+| `issue-writer` | `subagent` | `plan-project` | Formats one slice into a scope-only Linear issue (references Spec/Plan, never restates them) | Same restricted set as `spec-drafter` |
 
 ## Design principles
 
@@ -123,6 +123,7 @@ flowchart TD
 - **Verify against reality before finalizing** — a design reading well isn't the same as a design being buildable. `design-verifier` re-checks the finished draft's specific technical claims against the real codebases as a last gate, and any conflict is a decision for the human, never a silent fix.
 - **Spec before plan** — in `plan-project`, *what* the system does (repo-agnostic) is fully resolved before *how/where* it's built (repo-aware) is even considered.
 - **Vertical slices, not layers or repos** — `plan-project`'s task breakdown slices by user-flow value; a slice spanning both repos stays one issue, never split for the sake of parallelism.
+- **Reference, never duplicate** — issues carry scope and a precise pointer to the Spec/Plan sections that define the detail, never a copied excerpt or execution checklist. `issue-writer` is never even given the underlying spec/plan text, only the section names to point at — the docs remain the only source of truth, and a future implementation agent reads them directly rather than trusting anything frozen into the issue.
 - **Centralized I/O** — only each primary agent talks to Linear or the user; subagents are stateless drafting/investigation functions.
 - **Stateful via Linear, not via memory** — each agent's "state" is just what's already posted in Linear, so any session can resume it correctly.
 - **Self-validated output** — every agent and subagent file states an explicit Goal plus a self-check checklist it must pass before returning or posting. That checklist is the actual definition of done, not just a list of steps to follow.
@@ -133,3 +134,4 @@ flowchart TD
 - Automatic hand-off from `technical-design` to `plan-project` — run them separately for now; noted as a future direction.
 - Triggering either agent from a Linear mention.
 - Automatic approval detection in `plan-project` (e.g. polling Linear comments) — the approval gate is a live question today.
+- The Implementation-stage agent(s) that will consume these issues aren't built yet — by design, today's issues are scope + references only, thin enough that reading the Spec/Plan docs directly won't be optional for whatever picks them up next.

@@ -59,11 +59,11 @@ Only reached once Step 0 or Stage 2 step 8 above has gotten a real yes for this 
 
 1. Invoke `slice-planner` once with the full spec + full plan (do not fan this out per repo — it needs the whole picture to catch slices that span eventinc and nexus).
 2. Read the returned slices. If `slice-planner` flagged anything as unclear or under-specified rather than a scope decision, treat that as an open question — ask the user live, get a real answer, re-invoke with it folded in. Otherwise proceed.
-3. Invoke one `issue-writer` subagent per slice, in parallel (safe — slices are already independent).
+3. Invoke one `issue-writer` subagent per slice, in parallel (safe — slices are already independent). Give it only the slice itself (title, repo scope, named flow/section references, dependencies) and the Spec/Plan document links — not the underlying spec/plan text; it doesn't need it and shouldn't have it.
 4. Create each returned issue in Linear under the project, linked to the Spec and Plan documents. Set up dependency links between issues per the slice-planner's ordering (blocked-by / blocks) rather than leaving ordering implicit.
 5. Report back a short summary: how many issues created, their titles, and the dependency order — not the full content of each (that's in Linear).
 
 ## Rules
 
 - A slice tagged cross-repo becomes exactly one issue, not a linked pair — if you find yourself about to create two issues for one slice, stop and re-check the slice-planner's output instead.
-- Don't paste spec/plan content into issue bodies beyond what `issue-writer` already excerpted — if you're tempted to add more "for context," that content belongs in the linked docs, not duplicated here.
+- Never paste spec/plan content into an issue — not in `issue-writer`'s output, not added "for context" when creating it in Linear. Issues carry scope and references only; the Spec and Plan documents are the only source of truth, and an agent picking up the issue later reads them directly rather than trusting anything copied into the issue.
