@@ -5,6 +5,8 @@ permission:
   edit: deny
   webfetch: deny
   bash:
+    # Order matters: later rules override earlier ones, so "*": deny must stay first.
+    "*": deny
     "git status*": allow
     "git diff*": allow
     "git log*": allow
@@ -15,7 +17,6 @@ permission:
     "git push*": allow
     "gh pr create*": allow
     "gh pr view*": allow
-    "*": deny
 tools:
   write: false
   edit: false

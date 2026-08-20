@@ -163,9 +163,21 @@ The repair loop has a narrow auto-fix lane: clear-cut mechanical defects (lint, 
 | `code-verifier` | `subagent` | **A-gate** | `implement-project` | Checks code vs. spec, checklist, and scope boundary — over- and under-implementation weighted equally | Read-only, `bash` off — so it never re-runs tests, only judges the report |
 | `repo-ops` | `subagent` | C | `implement-project` | Sole git/GitHub surface: branch, commit, push, PR — one action per call | **Only agent with `bash`**, via a git/gh allowlist; `write`/`edit`/`patch` off |
 
+## Configuration
+
+[`opencode.json`](../opencode.json) carries three things, all of them needed for the pipelines to work on a machine that has nothing set up globally:
+
+- **The Linear MCP server.** Every primary agent is Linear-driven, so this ships with the package rather than being a per-person setup step. It's a remote server with OAuth — each person authenticates on first use and no credentials live in this repo.
+- **`agent.build.mode: "all"`.** This one is load-bearing, not cosmetic. OpenCode's built-in `build` defaults to `mode: primary`, and a primary agent can't be invoked via `task` — so without this line `implement-project` cannot delegate any code-writing and Stage 2 fails outright. `plan` is set the same way for parity; nothing here delegates to it.
+- **Every agent's model**, below.
+
+It lives at the **workspace root**, not inside `.opencode/`, and that placement is load-bearing. OpenCode reads an `agent` block from `.opencode/opencode.json`, but silently ignores every other top-level key there — `mcp` and `small_model` included, with no warning and no error. Anything beyond per-agent overrides has to sit in the root file to take effect. Check with `opencode debug config` after any change.
+
+Permission maps in the agent files have one sharp edge worth knowing: **later rules override earlier ones**, so a `"*": deny` has to be listed *first* in an allowlist. Listed last it overrides every allow above it and OpenCode drops the tool from the agent entirely — silently, with no error. `repo-ops`'s `bash` allowlist and the primaries' `task` allowlists all depend on this. Verify any change with `opencode debug agent <name>`.
+
 ## Model policy
 
-Every agent's model is assigned in one place — [`opencode.json`](opencode.json). Agent markdown files deliberately carry no `model:` line, so there's no precedence question: the JSON is the only place models are set, and re-tiering an agent is a one-line edit there.
+Every agent's model is assigned in one place — [`opencode.json`](../opencode.json). Agent markdown files deliberately carry no `model:` line, so there's no precedence question: the JSON is the only place models are set, and re-tiering an agent is a one-line edit there.
 
 | Tier | Model | Agents | Why |
 |---|---|---|---|
@@ -175,7 +187,7 @@ Every agent's model is assigned in one place — [`opencode.json`](opencode.json
 
 **The A-gen / A-gate split runs in this direction on purpose.** Drafting gets MiMo Pro and validation gets Muse Spark, so both gates stay cross-family: `code-verifier` (Muse Spark) checks code written by `build` (MiMo), and `design-verifier` (Muse Spark) checks a draft written by `design-drafter` (MiMo Pro). Swapping them would put a MiMo verifier on MiMo-written code — exactly the self-rationalizing setup the split exists to avoid.
 
-**Code-writing (`build`) runs on tier C by choice**, not by oversight: MiMo-V2.5 is a coding-oriented model, and the pipeline is deliberately structured so cheap generation is safe — `scope-resolver` hands it a checklist that requires no judgment calls, and `code-verifier` checks the result far more strictly than the model that produced it. Generate cheap, verify hard, repair in a loop. The corollary is that the verifier and the repair loop carry real weight here — if `build` starts needing several repair rounds per issue, moving it up a tier is a one-line change in [`opencode.json`](opencode.json).
+**Code-writing (`build`) runs on tier C by choice**, not by oversight: MiMo-V2.5 is a coding-oriented model, and the pipeline is deliberately structured so cheap generation is safe — `scope-resolver` hands it a checklist that requires no judgment calls, and `code-verifier` checks the result far more strictly than the model that produced it. Generate cheap, verify hard, repair in a loop. The corollary is that the verifier and the repair loop carry real weight here — if `build` starts needing several repair rounds per issue, moving it up a tier is a one-line change in [`opencode.json`](../opencode.json).
 
 The three primary orchestrators sit in tier C alongside the mechanical agents on purpose: they route and converse, but every judgment that matters is delegated to a tier-A subagent. `small_model` is pinned to `mimo-v2.5` too, so background work (titles, summaries, compaction) never touches the two stronger models. No top-level `model` is set — that would change the workspace default for everyday direct use, and pinning `agent.build.model` already covers code-writing.
 
@@ -193,7 +205,7 @@ Two things worth knowing:
 - **Vertical slices, not layers or repos** — `plan-project`'s task breakdown slices by user-flow value; a slice spanning both repos stays one issue, never split for the sake of parallelism.
 - **Reference, never duplicate** — issues carry scope and a precise pointer to the Spec/Plan sections that define the detail, never a copied excerpt or execution checklist. `issue-writer` is never even given the underlying spec/plan text, only the section names to point at — the docs remain the only source of truth, and a future implementation agent reads them directly rather than trusting anything frozen into the issue.
 - **Bound scope by what you hand over** — the strongest guard against an implementation agent doing a neighbouring issue's work isn't an instruction, it's never giving it the document that describes that work. `implement-project` fetches only the Spec/Plan sections an issue references, so the full Plan never reaches the thing writing code.
-- **Write power is narrow and split by kind** — `repo-ops` is the only agent with `bash`, scoped to a git/gh allowlist, and it cannot edit files; everything that reasons about code can't land it. Where a boundary is only instructed rather than enforced (the built-in `build` agent has all tools), say so out loud and give the verifier a check for it.
+- **Write power is narrow and split by kind** — `repo-ops` is the only agent with `bash`, scoped to a git/gh allowlist, and it cannot edit files; everything that reasons about code can't land it. Delegation is bounded the same way: each primary's `permission.task` allowlist names its own subagents and denies the rest. Where a boundary is only instructed rather than enforced (the built-in `build` agent has all tools), say so out loud and give the verifier a check for it.
 - **Centralized I/O** — only each primary agent talks to Linear or the user; subagents are stateless drafting/investigation functions.
 - **Stateful via Linear, not via memory** — each agent's "state" is just what's already posted in Linear, so any session can resume it correctly.
 - **Self-validated output** — every agent and subagent file states an explicit Goal plus a self-check checklist it must pass before returning or posting. That checklist is the actual definition of done, not just a list of steps to follow.
@@ -205,5 +217,5 @@ Two things worth knowing:
 - Triggering either agent from a Linear mention.
 - Automatic approval detection in `plan-project` (e.g. polling Linear comments) — the approval gate is a live question today.
 - Merging. `implement-project` opens a PR and stops; both repos require human review (nexus: 2 approvals; eventinc: tribe labels + staging QA), and Done means merged.
-- Enforcing the "code-writer must not touch git" boundary at the permission level — it's instructed per invocation, with `code-verifier`'s stray-git-state check as the backstop. Restricting the built-in `build` agent isn't narrowly possible: built-in agents are only configurable via `opencode.json`, so clamping it here would also clamp it for everyday direct use.
-- A separate global `issue-implementer` pipeline exists in `~/.config/opencode/` (with `linear-issue-fetcher`, `codebase-router`, `git-ops`). It's deliberately left alone, so both it and `implement-project` are Tab-switchable — worth retiring the older one once this pipeline proves out, since its assumption that issues carry concrete steps no longer matches the issue format.
+- Enforcing the "code-writer must not touch git" boundary at the permission level — it's instructed per invocation, with `code-verifier`'s stray-git-state check as the backstop. Clamping the built-in `build` agent's tools isn't narrowly possible: built-in agents are only configurable via `opencode.json`, so restricting it there would also restrict it for everyday direct use in this workspace. Note this applies to `build`'s *tools* only — the other half of the boundary, which agents each primary may delegate to, **is** enforced: all three primaries carry a `permission.task` allowlist naming their own subagents, and everything else is denied.
+- Superseding whatever else you have installed globally. `implement-project` descends from an earlier `issue-implementer` pipeline that assumed issues carry concrete implementation steps — an assumption the scope-only issue format here deliberately breaks. If you still have that pipeline in your own `~/.config/opencode/`, both stay Tab-switchable; nothing in this package touches your global config.

@@ -1,96 +1,118 @@
-# Planning Workflow — Agent Orchestration
+# Agentic Dev Workflow
 
-This directory holds the first stage (`Planning`) of a larger agentic dev pipeline (`Planning -> Implementation`, with `Clarification`/`Validation` to follow later, currently out of scope). It turns a Linear project — carrying four human-authored docs (WWW, Pitch, Solution Brief, Technical Design) — into a fully-resolved spec, a fully-resolved cross-repo technical plan, and a dependency-ordered set of vertical-slice Linear issues.
+Three OpenCode agents that take a Linear project from a rough idea to an open pull request — drafting the Technical Design, turning the approved docs into a spec, a cross-repo plan and dependency-ordered issues, then implementing one issue at a time across `eventinc` and `nexus`.
 
-It follows a spec-driven planning discipline (constitution → spec → plan → tasks): every ambiguity is surfaced as an explicit question and resolved live, in conversation, before anything is posted to Linear — never guessed, never deferred to implementation time.
+The rule that shapes all of them: **every ambiguity becomes an explicit question, asked live, and is resolved before anything is written down.** Nothing is guessed to fill a gap, and nothing is deferred to "we'll figure it out during implementation."
 
-## How it's invoked
+Everything each agent needs to resume lives in Linear, not in a session. You can close your terminal mid-project, come back next week, switch to the same agent, and it picks up from whatever already exists.
 
-There's a single entry point: **`plan-project`**, a `mode: primary` OpenCode agent (not a slash command). Tab-cycle into it (or your configured `switch_agent` keybind), then name or link a Linear project. It re-inspects that project's existing Linear docs/issues every time you engage it, so there's no separate "continue" step to remember — the same agent picks up wherever that specific project left off.
+## The three agents
 
-## Orchestration diagram
+| Agent | Run it when | It produces |
+|---|---|---|
+| `technical-design` | The project has WWW, Pitch and Solution Brief, but no Technical Design yet | A `Technical Design: <project>` doc in Linear, checked against the real code before it's posted |
+| `plan-project` | All four docs exist | `Spec: <project>` and `Plan: <project>` docs, then a dependency-ordered set of issues |
+| `implement-project` | The project has planned issues | Code, verified against the issue's scope, landed as a PR per repo |
 
-```mermaid
-flowchart TD
-    Start(["User switches to the plan-project<br/>agent and names a Linear project"]) --> Step0{{"Step 0: check project's<br/>existing Linear docs/issues"}}
+Run them in that order. Each one checks Linear first and tells you if you're not ready for it yet.
 
-    Step0 -->|"no Spec doc"| DocsCheck
-    Step0 -->|"Spec exists,<br/>no Plan doc"| Scouts
-    Step0 -->|"Spec + Plan exist,<br/>no issues yet"| Gate1{"Reviewed in Linear —<br/>break into issues now?"}
-    Step0 -->|"issues already exist"| Done(["Report done,<br/>ask what to change"])
+These are `mode: primary` agents, not slash commands — **Tab-cycle** into the one you want (or use your `switch_agent` keybind), then name or link a Linear project. There's no "continue" command; re-engaging an agent on the same project is how you resume.
 
-    subgraph Stage0 ["Stage 0 — Intake validation"]
-        DocsCheck["Orchestrator checks:<br/>WWW, Pitch, Solution Brief,<br/>Technical Design all present?"]
-        DocsCheck -->|"missing / unclear"| AskDocs(["Stop, ask user —<br/>never guess"])
-        DocsCheck -->|"all four present"| SD
-    end
+Behind them sit twelve subagents doing the investigation, drafting and verification. You never invoke those directly.
 
-    subgraph Stage1 ["Stage 1 — Spec drafting (repo-agnostic)"]
-        SD["spec-drafter<br/>drafts flows + EARS criteria"]
-        SD --> Q1{"Open<br/>questions?"}
-        Q1 -->|yes| AskLive1(["Ask user live"])
-        AskLive1 --> SD
-        Q1 -->|no| PostSpec[["Post 'Spec: project'<br/>doc to Linear"]]
-    end
+## Prerequisites
 
-    PostSpec --> Scouts
+- **OpenCode 1.18.18 or newer** — `opencode --version`
+- **A Linear account** with access to the projects you'll work on
+- **`gh` authenticated** — `gh auth status`. `implement-project` opens PRs through it.
+- **Access to the `opencode-go` provider** and its `mimo-v2.5`, `mimo-v2.5-pro` and `muse-spark-1.2-contributor` models
+- **This layout** — the repos as direct sub-directories of the workspace root, which is where you start `opencode`:
 
-    subgraph Stage2 ["Stage 2 — Technical plan drafting (repo-aware)"]
-        Scouts["repo-scout subagents<br/>(parallel — eventinc, nexus, ...)"]
-        Scouts --> Q2{"Any scout<br/>uncertain?"}
-        Q2 -->|yes| AskLive2(["Ask user live"])
-        AskLive2 --> Scouts
-        Q2 -->|no| PS["plan-synthesizer<br/>merges scout reports + spec + design"]
-        PS --> Q3{"Open<br/>questions?"}
-        Q3 -->|yes| AskLive3(["Ask user live"])
-        AskLive3 --> PS
-        Q3 -->|no| PostPlan[["Post 'Plan: project'<br/>doc to Linear"]]
-    end
+  ```
+  workspace/
+  ├── .opencode/       ← the agents and the design template
+  ├── opencode.json    ← models, Linear MCP, built-in agent config
+  ├── AGENTS.md
+  ├── eventinc/
+  └── nexus/
+  ```
 
-    PostPlan --> Gate1
-    Gate1 -->|"not yet"| StopHere(["Stop here — Step 0 resumes<br/>at Stage 3 next time"])
-    Gate1 -->|yes| SP
+## Setup
 
-    subgraph Stage3 ["Stage 3 — Task breakdown (vertical slices)"]
-        SP["slice-planner<br/>(single pass — sees whole spec + plan)"]
-        SP --> Slices["Dependency-ordered slices,<br/>each tagged single- or cross-repo"]
-        Slices --> IW["issue-writer subagents<br/>(parallel — one per slice)"]
-        IW --> CreateIssues[["Create Linear issues,<br/>linked + dependency-ordered"]]
-    end
-```
+1. Pull this repo into your workspace root, so `.opencode/` and `AGENTS.md` sit alongside your `eventinc` and `nexus` checkouts.
+2. Start `opencode` from the workspace root.
+3. The first time an agent reaches for Linear, you'll get an OAuth prompt in the browser. Approve it once; the token is yours and nothing is committed to this repo.
+4. Check the install:
 
-## Summary
+   ```bash
+   opencode agent list
+   ```
 
-**`plan-project`** (the only primary agent here) is the sole orchestrator. It owns all Linear reads/writes and all conversation with the user; the five subagents below never touch Linear or talk to the user directly — they're pure reasoning agents that take content in and return a draft plus a list of open questions.
+   You should see the three primaries, the twelve subagents, and `build (all)`. If `build` says `primary` instead of `all`, see Troubleshooting.
 
-1. **Step 0 — resume detection.** Every engagement starts by checking what already exists in Linear for that project (Spec doc? Plan doc? Issues?), not by assuming a fresh run. This is what replaced having two separate entry points.
-2. **Stage 0 — intake validation.** The orchestrator itself (no subagent) confirms all four required docs exist. Missing or unclear → hard stop, ask the user.
-3. **Stage 1 — spec drafting.** `spec-drafter` is deliberately repo-agnostic: it only knows WWW/Pitch/Solution Brief, and produces user flows with EARS acceptance criteria ("When [trigger], the system shall [behavior]"). Any open question is asked live; the agent redrafts and re-checks until there are none, only then posting the Spec doc to Linear.
-4. **Stage 2 — technical plan drafting.** One `repo-scout` per configured repo (today: `eventinc`, `nexus`) runs in parallel, each reading only its own repo's constitution (`AGENTS.md`/`.agents/rules`) to judge relevance — never guessing, always flagging uncertainty as a question. Once every scout is resolved, `plan-synthesizer` merges their reports with the spec and Technical Design into one cross-repo plan, under the same ask-until-resolved loop, before it's posted to Linear.
-5. **Approval gate.** Before task breakdown, the orchestrator asks for an explicit go-ahead — either right after posting the plan, or the next time it's engaged (via Step 0). This is a live question, not an automated check of Linear's state.
-6. **Stage 3 — task breakdown.** `slice-planner` runs once over the *entire* resolved spec + plan (not fanned out per repo) specifically so it can catch a vertical slice that genuinely needs changes in both `eventinc` and `nexus` and keep it as **one** issue instead of splitting it by repo. Only after slices are fixed does `issue-writer` fan out safely in parallel, one per slice, formatting each into a Linear issue that references the Spec/Plan docs instead of duplicating their content.
+## Using it
 
-### Agents at a glance
+### 1. `technical-design`
 
-| Agent | Mode | Role | Notable permissions |
-|---|---|---|---|
-| `plan-project` | `primary` | Orchestrator: all Linear I/O, all user conversation, drives Stages 0–3 | `edit`/`bash` denied — never touches code |
-| `spec-drafter` | `subagent` | Drafts/refines the repo-agnostic spec (Stage 1) | `edit`/`bash`/`task`/`webfetch`/`websearch` denied — pure drafting |
-| `repo-scout` | `subagent` | Judges one repo's relevance (Stage 2, fanned out per repo) | Only subagent with `read`/`glob`/`grep` allowed |
-| `plan-synthesizer` | `subagent` | Merges scout reports into the cross-repo plan (Stage 2) | Same restricted set as `spec-drafter` |
-| `slice-planner` | `subagent` | Single-pass vertical-slice breakdown (Stage 3) | Same restricted set as `spec-drafter` |
-| `issue-writer` | `subagent` | Formats one slice into a Linear issue (Stage 3, fanned out per slice) | Same restricted set as `spec-drafter` |
+Tab to `technical-design` and name your Linear project.
 
-### Design principles
+It pulls the WWW, Pitch and Solution Brief (the Solution Brief wins on any conflict), reads the design template, then sends scouts into `eventinc` and `nexus` in parallel to find the areas your feature touches. Anything the docs don't settle comes back to you as a direct question — expect a few rounds of this; it's the point, not friction.
 
-- **Ask, never guess** — extends the workspace root [`AGENTS.md`](../AGENTS.md)'s existing rule to every stage: any subagent that can't confidently resolve something raises it as an explicit question instead of filling the gap.
-- **Spec before plan** — *what* the system does (repo-agnostic) is fully resolved before *how/where* it's built (repo-aware) is even considered.
-- **Vertical slices, not layers or repos** — Stage 3 slices by user-flow value; a slice spanning both repos stays one issue, never split for the sake of parallelism.
-- **Centralized I/O** — only the primary agent talks to Linear or the user; subagents are stateless drafting functions.
-- **Stateful via Linear, not via memory** — the workflow's "state" is just what's already posted in Linear, so any session can resume it correctly.
+Once you've reviewed the draft together, it runs a **feasibility check**: a separate verifier re-reads the finished draft against each repo's actual current code. Anything that doesn't hold up comes back to you as a decision, never a silent patch. When it's clean, the doc is posted to Linear.
 
-### Out of scope (for now)
+If a Technical Design already exists, it loads it and asks what you want to revisit instead of starting over.
 
-- `Clarification` and `Validation` pipeline stages.
-- Automatic approval detection (e.g. polling Linear comments) — the approval gate is a live question today.
-- Triggering `plan-project` from a Linear mention — noted as a future direction, not yet wired up.
+### 2. `plan-project`
+
+Tab to `plan-project` and name the project. It needs all four docs present and will stop and tell you if one is missing.
+
+Two stages, in this order on purpose:
+
+- **Spec** — *what* the system does, deliberately with no mention of repos or technology. Acceptance criteria are written in EARS form ("When *X*, the system shall *Y*"), so each one is objectively checkable. Posted as `Spec: <project>`.
+- **Plan** — *how and where* it gets built. A scout reads each repo, then a synthesizer merges everything into one cross-repo plan. Posted as `Plan: <project>`.
+
+Then it **stops and asks** whether to break the plan into issues. That's a real question, not a check of Linear's state — review the docs in Linear first and come back when you're happy. Re-engaging the agent resumes at that gate.
+
+Issues are sliced by user-visible value, not by layer or repo. A flow that genuinely needs both `eventinc` and `nexus` stays a **single** issue. Each issue carries only its scope and a precise pointer to the Spec/Plan sections that define the detail — never a copy of them, so revising a doc can't leave issues stale.
+
+### 3. `implement-project`
+
+Tab to `implement-project` and name the project. It picks the earliest unblocked issue in dependency order, or asks you if the ordering is genuinely ambiguous.
+
+It fetches **only** the Spec and Plan sections that issue references — the full Plan never reaches the code-writing agent, so a neighbouring issue's work structurally can't leak in. That scope is resolved into a concrete checklist, built one repo at a time (never in parallel), and verified after each leg.
+
+Verification weights doing **too much** as heavily as doing too little. Mechanical defects (a lint failure, a missing mandated test) are fixed automatically and still named in the final report. Everything else — every scope dispute, every over-implementation finding — comes to you as a decision.
+
+Then it branches, commits, pushes and opens a PR using each repo's own conventions, and moves the issue to in-review. **It never marks an issue Done** — that means merged, which stays a human action behind both repos' review gates.
+
+## Customizing
+
+**Add a repo.** Each of the three primaries has a `Configured repos` block near the top of its file in `.opencode/agents/`. Add the name and its workspace-relative path (`./your-repo`) there. For `implement-project`, also give it that repo's format/test commands and branch/commit conventions. That block is the only place that needs to change.
+
+**Change what a Technical Design looks like.** Edit `.opencode/templates/technical-design-template.md`. It's plain markdown, read fresh on every run — no agent file changes.
+
+**Re-tier a model.** All models are assigned in the workspace-root `opencode.json` and nowhere else; agent files deliberately carry no `model:` line. Moving an agent between tiers is a one-line edit. See the [design doc](.opencode/README.md#model-policy) for which tier does what and why.
+
+> **Editing permissions?** In OpenCode, later rules override earlier ones, so a `"*": deny` must be listed **first** in an allowlist. Put it last and it silently strips the tool entirely. Check any change with `opencode debug agent <name>`.
+
+## Troubleshooting
+
+**`opencode agent list` shows `build (primary)`, or `implement-project` can't write code.** The workspace-root `opencode.json` sets `agent.build.mode: "all"`, which is what makes the built-in `build` agent callable as a subagent. Confirm you're running `opencode` from the workspace root — that's the only place the project config is picked up.
+
+**The agent says it has no Linear tools.** The OAuth flow hasn't completed. Check the server with `opencode mcp list`, then re-trigger it by asking the agent for any Linear project.
+
+**A model is unavailable or access is denied.** You need the `opencode-go` provider configured — `opencode auth`. Check what you can actually reach with `opencode models opencode-go`.
+
+**An agent refuses to delegate.** That's deliberate. Each primary has a `permission.task` allowlist naming exactly the subagents it may call. Inspect it with `opencode debug agent <name>`.
+
+## How it works, and why
+
+A few ideas do most of the work here:
+
+- **Ask, never guess.** Any agent that can't confidently resolve something raises it instead of filling the gap.
+- **Spec before plan.** *What* is fully settled before *how and where* is even considered.
+- **Verify against reality.** A design that reads well isn't the same as one that's buildable, so a separate agent re-checks the finished draft against the actual code — on a different model family, so it doesn't rationalize its own work.
+- **Bound scope by what you hand over.** The strongest guard against an agent doing the next issue's work isn't an instruction — it's never giving it the document that describes that work.
+- **Narrow, split write power.** `repo-ops` is the only agent that can touch git, through a git/gh allowlist, and it can't edit files. Everything that reasons about code can't land it.
+
+The full rationale — orchestration diagrams, the per-agent table, the model policy and its costs, and what's deliberately out of scope — is in **[`.opencode/README.md`](.opencode/README.md)**.

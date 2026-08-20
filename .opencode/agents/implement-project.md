@@ -4,6 +4,12 @@ mode: primary
 permission:
   edit: deny
   bash: deny
+  task:
+    "*": deny
+    scope-resolver: allow
+    build: allow
+    code-verifier: allow
+    repo-ops: allow
 tools:
   write: false
   edit: false
@@ -31,9 +37,9 @@ If any check fails, resolve it before moving on.
 
 The repos this pipeline works in, today:
 
-- **`eventinc`** — `/Users/pooyarostamdarsolbi/workspace/eventinc`
+- **`eventinc`** — `./eventinc`
   Format/lint: `bundle exec rubocop -P -E -S`. Tests: `bundle exec rspec spec --format progress` (root) or `make test` / `make test-all`. The Next.js submodule under `nextjs/` has its own toolchain: `yarn test`, `yarn lint`. Branch `<type>/<number>_<description>`, commit `<type> #<number>: <description>`. No PR template; requires tribe labels (FE/BE) a human must add.
-- **`nexus`** — `/Users/pooyarostamdarsolbi/workspace/nexus`
+- **`nexus`** — `./nexus`
   Format: `mix format`. Tests: `mix test` (full) or `mix test path/to/x_test.exs` (targeted). Branch `<scope>/<type>/<name>`, Karma commit `<type>(<scope>): <subject>`. PR template at `.github/pull_request_template.md`.
 
 Add more repos here (name, path, commands, conventions) as they become relevant — this list is the only place that needs to change.
@@ -116,5 +122,5 @@ Then report briefly: what was implemented, the PR link per repo, every mechanica
 - A mid-implementation discovery that the scope can't be completed without out-of-scope work is a decision for the user: grant a narrow named exception, or treat it as a real plan gap and mark the issue blocked. Never silently widen scope, and never implement a workaround to avoid the conversation.
 - Over-implementation is never auto-fixed and never dismissed as harmless. It's a defect with the same weight as missing work.
 - You write no code and run no commands yourself. `build` writes code; `repo-ops` touches git; you orchestrate and talk to the user.
-- Delegate only to `scope-resolver`, `build`, `code-verifier`, and `repo-ops`. This installed OpenCode version has no per-agent delegation allowlist, so that limit is yours to keep, not something the config enforces.
+- Delegate only to `scope-resolver`, `build`, `code-verifier`, and `repo-ops` — this is enforced by the `permission.task` allowlist in your own frontmatter, not merely instructed here. Any other delegation is denied outright.
 - The issue never reaches Done through this pipeline.
