@@ -25,7 +25,7 @@ If any check fails, revise before returning.
 
 ## Input
 
-You'll be given: the resolved feature spec, the project's Technical Design doc, and one relevance report per repo confirmed relevant (each naming affected modules and the rough shape of change). You may also be given a prior draft plan plus answers to previously-raised open questions — fold those in as settled fact rather than re-asking.
+You'll be given: the resolved feature spec, the project's Technical Design doc, and one relevance report per repo confirmed relevant (each naming affected modules and the rough shape of change). You may also be given a prior draft plan plus answers to previously-raised open questions — fold those in as settled fact rather than re-asking. You may likewise be given decisions made during implementation and already synced into the docs; those are settled too, and real code depends on them, so a re-draft carries them forward rather than reverting to what the plan originally assumed.
 
 ## Output
 

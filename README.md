@@ -4,6 +4,8 @@ Three OpenCode agents that take a Linear project from a rough idea to an open pu
 
 The rule that shapes all of them: **every ambiguity becomes an explicit question, asked live, and is resolved before anything is written down.** Nothing is guessed to fill a gap, and nothing is deferred to "we'll figure it out during implementation."
 
+And its counterpart, for the decisions that only *can* be made during implementation: **every decision is written back into the docs it affects, before the stage that made it continues.** Answer a question mid-build and the Spec, Plan and Technical Design are patched to match — including the sections the decision affects indirectly — so the next issue is never planned against a document that quietly stopped being true.
+
 Everything each agent needs to resume lives in Linear, not in a session. You can close your terminal mid-project, come back next week, switch to the same agent, and it picks up from whatever already exists.
 
 ## The three agents
@@ -12,13 +14,13 @@ Everything each agent needs to resume lives in Linear, not in a session. You can
 |---|---|---|
 | `technical-design` | The project has WWW, Pitch and Solution Brief, but no Technical Design yet | A `Technical Design: <project>` doc in Linear, checked against the real code before it's posted |
 | `plan-project` | All four docs exist | `Spec: <project>` and `Plan: <project>` docs, then a dependency-ordered set of issues |
-| `implement-project` | The project has planned issues | Code, verified against the issue's scope, landed as a PR per repo |
+| `implement-project` | The project has planned issues | Code, verified against the issue's scope, landed as a PR per repo — plus every decision made along the way patched back into the three docs |
 
 Run them in that order. Each one checks Linear first and tells you if you're not ready for it yet.
 
 These are `mode: primary` agents, not slash commands — **Tab-cycle** into the one you want (or use your `switch_agent` keybind), then name or link a Linear project. There's no "continue" command; re-engaging an agent on the same project is how you resume.
 
-Behind them sit twelve subagents doing the investigation, drafting and verification. You never invoke those directly.
+Behind them sit fourteen subagents doing the investigation, drafting, verification and doc-syncing. You never invoke those directly.
 
 ## Prerequisites
 
@@ -48,7 +50,7 @@ Behind them sit twelve subagents doing the investigation, drafting and verificat
    opencode agent list
    ```
 
-   You should see the three primaries, the twelve subagents, and `build (all)`. If `build` says `primary` instead of `all`, see Troubleshooting.
+   You should see the three primaries, the fourteen subagents, and `build (all)`. If `build` says `primary` instead of `all`, see Troubleshooting.
 
 ## Using it
 
@@ -75,6 +77,8 @@ Then it **stops and asks** whether to break the plan into issues. That's a real 
 
 Issues are sliced by user-visible value, not by layer or repo. A flow that genuinely needs both `eventinc` and `nexus` stays a **single** issue. Each issue carries only its scope and a precise pointer to the Spec/Plan sections that define the detail — never a copy of them, so revising a doc can't leave issues stale.
 
+Questions raised while planning the *technical* side are often really questions about behaviour, and by then the Spec is already posted. When your answer changes something a posted doc says, it's patched into that doc before planning continues — you'll see it say which section it revised. Re-engaging the agent on a project that's already been implemented against works the same way in reverse: it notices the docs have moved since the issues were cut, tells you what may no longer line up, and asks before touching anything.
+
 ### 3. `implement-project`
 
 Tab to `implement-project` and name the project. It picks the earliest unblocked issue in dependency order, or asks you if the ordering is genuinely ambiguous.
@@ -82,6 +86,15 @@ Tab to `implement-project` and name the project. It picks the earliest unblocked
 It fetches **only** the Spec and Plan sections that issue references — the full Plan never reaches the code-writing agent, so a neighbouring issue's work structurally can't leak in. That scope is resolved into a concrete checklist, built one repo at a time (never in parallel), and verified after each leg.
 
 Verification weights doing **too much** as heavily as doing too little. Mechanical defects (a lint failure, a missing mandated test) are fixed automatically and still named in the final report. Everything else — every scope dispute, every over-implementation finding — comes to you as a decision.
+
+**Every decision you make here goes back into the docs before the run continues.** That's the part worth knowing about, because it's where most of the questions you'll be asked come from:
+
+- The decision is first recorded on the issue as a comment, marked `sync: pending`, before anything is edited. If the session dies there, the decision survives — the next run finds the unfinished record and picks it up.
+- Then it's patched into whichever of the Spec, Plan and Technical Design it actually changes, **including the sections it changes indirectly**. One ruling on when a notification fires usually means a Spec criterion, a Plan section and a test case in the Technical Design, and it follows that chain until nothing contradicts it.
+- A separate agent on a different model family checks each patch before it's saved: does it say what you actually decided, did anything unrelated get edited, is anything left in the doc contradicting it. If it can't tell, you get asked.
+- The comment closes as `sync: done`, naming every section revised — and nothing lands as a PR while a `sync: pending` is still open.
+
+Two things it deliberately won't do: writing something into the Plan doesn't authorise building it, so work a decision adds waits for a later issue; and it never creates or resizes issues, since slicing needs the whole plan in view. It patches the Plan and tells you `plan-project` needs another run.
 
 Then it branches, commits, pushes and opens a PR using each repo's own conventions, and moves the issue to in-review. **It never marks an issue Done** — that means merged, which stays a human action behind both repos' review gates.
 
@@ -113,6 +126,7 @@ A few ideas do most of the work here:
 - **Spec before plan.** *What* is fully settled before *how and where* is even considered.
 - **Verify against reality.** A design that reads well isn't the same as one that's buildable, so a separate agent re-checks the finished draft against the actual code — on a different model family, so it doesn't rationalize its own work.
 - **Bound scope by what you hand over.** The strongest guard against an agent doing the next issue's work isn't an instruction — it's never giving it the document that describes that work.
+- **A decision isn't made until it's written down.** The conversation ends; the documents are what the next issue gets planned against. So every decision made after a doc was posted is patched back into it, in the stage that made it, gated by a verifier on a different model family.
 - **Narrow, split write power.** `repo-ops` is the only agent that can touch git, through a git/gh allowlist, and it can't edit files. Everything that reasons about code can't land it.
 
 The full rationale — orchestration diagrams, the per-agent table, the model policy and its costs, and what's deliberately out of scope — is in **[`.opencode/README.md`](.opencode/README.md)**.

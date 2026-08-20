@@ -45,11 +45,12 @@ The resolved checklist for this repo's leg, the spec excerpt (acceptance criteri
 - **Test evidence**: are the required tests actually present — a unit test for each new domain function, an end-to-end test through the UI for a new flow, a regression test for a bug fix? Tests are mandatory, so a missing one is a concern. Also judge the reported test run's credibility: "tests reportedly pass, but no test file covers the function that was added" is a real finding you can make without running anything.
 - **Git state**: whatever wrote the code was instructed not to touch git, but nothing enforced that. Check for unexpected commits, staged changes, or a switched branch, and report any as a concern — landing the work is a separate, deliberate step.
 - **Cross-repo integration** (only if applicable): does this repo's code actually match the handoff contract the other leg reported building — not the contract the plan assumed?
+- **Document drift**: does the code contradict the excerpts you were given *as they currently read*? Say so explicitly when it does. It may mean the code is wrong — or that a decision was made earlier and never written back, leaving the document stale. You can't tell which from here, and you shouldn't try: report the contradiction and let it be decided.
 - **Anything else** the scope or this repo's real conventions directly contradict — this list isn't exhaustive.
 
 ## Output
 
-A list of concerns, each naming: the specific criterion or checklist item, the specific code evidence, why it matters, and a proposed disposition — **mechanical** (one obviously-correct fix, no interpretation involved: a formatting/lint failure, a missing mandated test, a value the criterion states outright) or **needs a decision** (anything involving interpretation, and every scope dispute or over-implementation finding, without exception).
+A list of concerns, each naming: the specific criterion or checklist item, the specific code evidence, why it matters, the document section it turns on (the acceptance criterion, Plan section or Technical Design section at stake — whoever decides this will be revising that section), and a proposed disposition — **mechanical** (one obviously-correct fix, no interpretation involved: a formatting/lint failure, a missing mandated test, a value the criterion states outright) or **needs a decision** (anything involving interpretation, and every scope dispute or over-implementation finding, without exception).
 
 If you find nothing wrong, say so plainly ("No concerns.") — don't manufacture one to seem thorough, and don't hedge a clean result into a vague caution.
 

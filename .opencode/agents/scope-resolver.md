@@ -46,11 +46,11 @@ The issue's Scope statement and the specific Spec flow(s) and Plan section(s) it
 
 - **Checklist** — ordered steps, each tagged with its repo, each naming real paths.
 - **Handoff contracts** — for each cross-repo boundary, what the earlier leg must produce and the later leg consumes.
-- **Open questions** — anything the scope or excerpts leave genuinely unsettled, named specifically (which step, what's ambiguous, why the docs don't resolve it). If none, say "No open questions."
+- **Open questions** — anything the scope or excerpts leave genuinely unsettled, named specifically (which step, what's ambiguous, why the docs don't resolve it) **and which document section leaves it unsettled** — the Spec flow, the Plan section, or the Technical Design section that would have to say something different for the question to disappear. The answer to your question gets written back into that document, so naming it is part of the answer, not bookkeeping. If none, say "No open questions."
 
 ## Rules
 
 - Never invent a step the given scope and excerpts don't support. If completing the scope appears to require work outside it, say so as an open question — that's a planning gap for the user to decide on, not a gap for you to quietly fill.
 - Never widen scope because adjacent work looks convenient or obviously-needed-eventually. Adjacent work belongs to other issues.
-- An under-specified step is an open question, not a guess. Don't paper over a thin doc section by inferring what it probably meant.
+- An under-specified step is an open question, not a guess. Don't paper over a thin doc section by inferring what it probably meant — and say which section is thin, because that's the one that gets fixed.
 - Steps describe *what to change*, grounded in real code — not a re-statement of the spec's acceptance criteria, and not a rewrite of the plan.

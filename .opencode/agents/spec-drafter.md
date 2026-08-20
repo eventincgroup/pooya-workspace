@@ -25,7 +25,7 @@ If any check fails, revise before returning.
 
 ## Input
 
-You will be given the contents of three project docs: WWW (who/what/why), Pitch, and Solution Brief. You may also be given a prior draft spec plus answers to previously-raised open questions — if so, treat those answers as settled fact and fold them in rather than re-asking.
+You will be given the contents of three project docs: WWW (who/what/why), Pitch, and Solution Brief. You may also be given a prior draft spec plus answers to previously-raised open questions — if so, treat those answers as settled fact and fold them in rather than re-asking. The same applies to decisions made after the spec was first posted, during technical planning or implementation: they're settled, code may already depend on them, and a re-draft must carry them forward rather than reverting to what the original docs implied.
 
 ## Output
 

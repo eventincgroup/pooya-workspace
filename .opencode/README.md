@@ -1,13 +1,16 @@
 # Agentic Dev Workflow — Orchestration
 
-This directory holds two independent OpenCode primary agents covering the early, human-collaborative part of the dev pipeline (`... -> Planning -> Implementation`, with `Clarification`/`Validation` to follow later, currently out of scope):
+This directory holds three independent OpenCode primary agents covering the dev pipeline from a rough idea to an open PR (`... -> Planning -> Implementation`, with `Clarification`/`Validation` to follow later, currently out of scope):
 
 - **`technical-design`** — drafts one of the four docs a Linear project needs (WWW, Pitch, Solution Brief, Technical Design), by investigating `eventinc` and `nexus` together with you and checking the result against the real code before finalizing.
 - **`plan-project`** — once all four docs exist, turns them into a fully-resolved spec, a fully-resolved cross-repo technical plan, and a dependency-ordered set of vertical-slice Linear issues.
+- **`implement-project`** — takes the earliest unblocked issue, resolves it into a checklist, has the code written and verified against that scope, and lands it as a PR per repo.
 
-They're intentionally standalone today — no automatic hand-off between them. Run `technical-design` first if the Technical Design doc doesn't exist yet; run `plan-project` once it does. Both follow the same spec-driven discipline: every ambiguity is surfaced as an explicit question and resolved live, in conversation, before anything is posted to Linear — never guessed, never deferred.
+They're intentionally standalone today — no automatic hand-off between them. Run them in that order; each checks Linear first and tells you if you're not ready for it yet. All three follow the same spec-driven discipline: every ambiguity is surfaced as an explicit question and resolved live, in conversation, before anything is posted to Linear — never guessed, never deferred.
 
-Both are `mode: primary` OpenCode agents, not slash commands — Tab-cycle into one (or your configured `switch_agent` keybind), then name or link a Linear project. Each re-inspects that project's existing Linear docs/issues every time you engage it, so there's no separate "continue" step to remember.
+They're `mode: primary` OpenCode agents, not slash commands — Tab-cycle into one (or your configured `switch_agent` keybind), then name or link a Linear project. Each re-inspects that project's existing Linear docs/issues every time you engage it, so there's no separate "continue" step to remember.
+
+**The documents are the state, so they can never be allowed to go stale.** The pipeline runs forwards, but decisions don't: an answer given during technical planning can be a *spec* decision, and a decision made mid-implementation can invalidate a Plan section, a criterion and a test case at once. Every stage that produces a decision after a document was posted therefore syncs it back — `doc-syncer` writes the revision as anchored patches, `doc-sync-verifier` gates it on a different model family, and the decision follows its own cascade through all three documents until nothing is left contradicting it. That's what makes "state lives in Linear" a real claim rather than an aspiration.
 
 ## `technical-design`
 
@@ -79,11 +82,13 @@ flowchart TD
         Scouts["repo-scout subagents<br/>(parallel — eventinc, nexus, ...)"]
         Scouts --> Q2{"Any scout<br/>uncertain?"}
         Q2 -->|yes| AskLive2(["Ask user live"])
-        AskLive2 --> Scouts
+        AskLive2 --> Sync2["Doc sync, if the answer changes<br/>the posted Spec / Technical Design"]
+        Sync2 --> Scouts
         Q2 -->|no| PS["plan-synthesizer<br/>merges scout reports + spec + design"]
         PS --> Q3{"Open<br/>questions?"}
         Q3 -->|yes| AskLive3(["Ask user live"])
-        AskLive3 --> PS
+        AskLive3 --> Sync3["Doc sync, if the answer changes<br/>the posted Spec / Technical Design"]
+        Sync3 --> PS
         Q3 -->|no| PostPlan[["Post 'Plan: project'<br/>doc to Linear"]]
     end
 
@@ -101,6 +106,8 @@ flowchart TD
 
 `plan-project` is the sole orchestrator for its own flow — it owns every Linear read/write and every conversation with you; its five subagents never touch Linear or talk to you directly, they're pure reasoning agents fed content and returning a draft plus open questions. Spec drafting (`spec-drafter`) is repo-agnostic and fully resolved before technical planning (`repo-scout` × N in parallel, then `plan-synthesizer`) starts. Task breakdown deliberately runs `slice-planner` once over the *whole* plan (not fanned out) so a slice needing both `eventinc` and `nexus` stays one issue, then `issue-writer` fans out safely per slice since they're independent by then. Issues themselves carry only scope and a precise pointer to the relevant Spec/Plan sections — never the acceptance criteria or execution steps themselves, so the docs stay the single source of truth and an issue can't go stale if a doc is revised later.
 
+The two `Doc sync` nodes are the back-propagation path. A repo-scout or synthesizer question is very often a *spec* question in technical clothing — "which system of record wins for partner notifications?" is answered in the Plan but decided about behaviour — and the Spec is already posted by then. Answering it only in the Plan would leave the Spec, the document acceptance is judged against, stating something the user no longer believes. So the answer is patched into whichever posted document it actually changes before Stage 2 continues. Step 0 has a matching branch in the other direction: when `implement-project` has synced decisions into the docs since the issues were cut, the issue set may no longer match the Plan, and re-slicing that delta is a `plan-project` run — never something the implementation pipeline does for itself.
+
 ## `implement-project`
 
 ```mermaid
@@ -117,12 +124,15 @@ flowchart TD
     Excerpt --> SR["scope-resolver:<br/>concrete checklist + handoff contracts"]
     Full --> SR
     SR --> Q1{"Open<br/>questions?"}
-    Q1 -->|yes| Ask1(["Ask user live"])
+    Q1 -->|yes| Ask1(["Ask user live<br/>→ Stage D"])
     Ask1 --> SR
 
     Q1 -->|no| Legs["For each repo leg, IN ORDER<br/>(never parallel)"]
     Legs --> Build["build agent writes the code<br/>+ runs format/tests<br/>(scope contract passed per call)"]
-    Build --> LegV["code-verifier: leg-scoped check"]
+    Build --> Dev{"Contract built ≠<br/>contract planned?"}
+    Dev -->|yes| AskDev(["User accepts it or<br/>redoes the leg → Stage D"])
+    AskDev --> LegV
+    Dev -->|no| LegV["code-verifier: leg-scoped check"]
     LegV --> MoreLegs{"More legs?"}
     MoreLegs -->|yes| Legs
     MoreLegs -->|no| FinalV["code-verifier per affected repo<br/>(parallel) — spec, checklist,<br/>scope boundary, tests, git state"]
@@ -131,17 +141,56 @@ flowchart TD
     Recon --> Concerns{"Concerns?"}
     Concerns -->|"mechanical"| AutoFix["Scoped build re-invocation,<br/>re-verify, disclose in report"]
     AutoFix --> Concerns
-    Concerns -->|"over-implementation<br/>or judgment call"| Decide(["Always a user decision —<br/>never auto-fixed"])
+    Concerns -->|"over-implementation<br/>or judgment call"| Decide(["Always a user decision —<br/>never auto-fixed → Stage D"])
     Decide --> Concerns
-    Concerns -->|none| Land["repo-ops: branch → commit →<br/>push → PR (one action per call)"]
+    Concerns -->|none| Gate{"Any sync: pending<br/>left on the issue?"}
+    Gate -->|yes| StageD(["Finish Stage D first"])
+    StageD --> Gate
+    Gate -->|no| Land["repo-ops: branch → commit →<br/>push → PR (one action per call)"]
     Land --> Report[["In-review state + PR link.<br/>Never Done."]]
 ```
-
-Where the other two pipelines stop at reasoning, this one writes code — so the design is mostly about bounding it. Three mechanisms do that. **Scope is bounded by what's fetched**: in next-issue mode the orchestrator follows the issue's References and fetches only those named Spec/Plan sections, so the full Plan never reaches the thing writing code — it structurally can't implement a neighbouring issue's work from a document it never saw. **`code-verifier` weights over-implementation exactly as heavily as missing work**, since code that quietly does a later issue's job makes this issue un-reviewable and steals the next one's scope. And **legs run sequentially, never in parallel**, with each later leg receiving the handoff contract the earlier one *reported actually building* rather than the contract the plan predicted.
+Where the other two pipelines stop at reasoning, this one writes code — so the design is mostly about bounding it. Three mechanisms do that. **Scope is bounded by what's handed over**: in next-issue mode the orchestrator follows the issue's References and passes on only those named Spec/Plan sections, so the full Plan never reaches the thing writing code — it structurally can't implement a neighbouring issue's work from a document it never saw. (Linear's document API reads whole documents, so this is a bound on hand-off, not on what the orchestrator can see. The agent file says so explicitly rather than implying an isolation that doesn't exist.) **`code-verifier` weights over-implementation exactly as heavily as missing work**, since code that quietly does a later issue's job makes this issue un-reviewable and steals the next one's scope. And **legs run sequentially, never in parallel**, with each later leg receiving the handoff contract the earlier one *reported actually building* rather than the contract the plan predicted.
 
 Code-writing delegates to OpenCode's built-in **`build`** agent rather than a custom implementer — no coding prompt to maintain here. The tradeoff is stated plainly: `build` has all tools enabled, so "don't touch git, `repo-ops` lands the work" is a rule it's told per invocation, not a wall it hits. `code-verifier` checks for stray git state as the backstop. `repo-ops` holds the only *enforced* git surface (a `bash` allowlist, one action per call) and is the sole agent that can commit, push, or open a PR.
 
-The repair loop has a narrow auto-fix lane: clear-cut mechanical defects (lint, a missing mandated test, a value the acceptance criterion states outright) are fixed in a scoped re-invocation and still named in the final report — auto-fixed means disclosed, not invisible. Everything else, and every over-implementation finding without exception, is a decision for the user. Landing goes through each repo's real convention (they differ genuinely — nexus uses Karma commits and has a PR template; eventinc doesn't), with nexus's auto-merge checkbox always left unchecked and eventinc's tribe labels surfaced as a manual step rather than guessed. An issue never reaches Done through this pipeline; Done means merged, which is a human action.
+The repair loop has a narrow auto-fix lane: clear-cut mechanical defects (lint, a missing mandated test, a value the acceptance criterion states outright) are fixed in a scoped re-invocation and still named in the final report — auto-fixed means disclosed, not invisible. A mechanical fix is explicitly *not* a decision and doesn't sync: nobody ruled on anything. The exception is a mechanical fix that was only necessary because a document was wrong — the wrongness itself is a decision, and it syncs. Everything else, and every over-implementation finding without exception, is a decision for the user, and every one of those goes through Stage D before the repair is even attempted. Landing goes through each repo's real convention (they differ genuinely — nexus uses Karma commits and has a PR template; eventinc doesn't), with nexus's auto-merge checkbox always left unchecked and eventinc's tribe labels surfaced as a manual step rather than guessed. An issue never reaches Done through this pipeline; Done means merged, which is a human action.
+
+### Stage D, and why decisions were the leak
+
+This is the stage where the pipeline's documents stop being planning artifacts and start being maintained. Everything upstream resolves ambiguity *before* writing anything down, which works right up until code meets reality: a criterion nobody read closely enough, a contract that had to be shaped differently once a real schema was involved, a verifier finding the user resolves by reinterpreting the spec. Those decisions used to live in exactly one place — the conversation — and the conversation ends. The docs then described a system that no longer existed, and the *next* issue got planned against them. Nothing in the pipeline would notice, because every individual run looked clean.
+
+Every `→ Stage D` above enters the same loop, drawn separately because it's reached from four places and returns to each:
+
+```mermaid
+flowchart TD
+    In(["A decision is made —<br/>an answer, a ruling, a deviation,<br/>an accepted tradeoff, a scope gap"]) --> Rec["Comment it on the issue:<br/>what, why, sync: pending"]
+    Rec --> Gather["Assemble affected section text<br/>+ heading index of all three docs"]
+    Gather --> DS["doc-syncer:<br/>anchored patches per doc<br/>+ cascade list"]
+    DS --> Casc{"Cascade<br/>empty?"}
+    Casc -->|no| More["Fetch the named sections"]
+    More --> DS
+    Casc -->|yes| DV["doc-sync-verifier<br/>(different model family) —<br/>faithful? contained? complete?"]
+    DV --> Conc{"Concerns?"}
+    Conc -->|mechanical| DS
+    Conc -->|"needs a decision"| AskD(["Ask user live"])
+    AskD --> DS
+    Conc -->|none| Apply[["One patched save per doc"]]
+    Apply --> Ok{"Anchors still<br/>matched?"}
+    Ok -->|"no — doc changed underneath"| More
+    Ok -->|yes| Done[["Close the record:<br/>sync: done + sections revised"]]
+    Done --> Out(["Return to the stage<br/>that made the decision"])
+```
+
+Four properties make Stage D more than a note-taking step:
+
+- **It runs inside the stage that produced the decision**, not before landing. Decisions resolved together in one exchange sync as one batch, but a decision never crosses a stage boundary unsynced — so the checklist `scope-resolver` produces, and the contract the next leg is built against, both come from documents that already say what was just decided.
+- **The record is written before the revision.** A `sync: pending` comment lands on the issue the moment the decision is made, and Step 0 of any later run looks for one. A dead session can lose the doc edit; it can't lose the decision.
+- **A decision cascades.** `doc-syncer` gets the sections believed affected *plus the heading index of all three documents*, and returns a cascade list of sections it can see are implicated but wasn't shown. Those get fetched and fed back until the list comes back empty. One ruling on when a notification fires typically lands in a Spec criterion, a Plan section and a Technical Design test case — catching only the first is the failure mode this exists to prevent, so the loop doesn't terminate on the obvious hit.
+- **Patches, not rewrites.** Revisions are anchored `replace`/`insert`/`replace_range` operations applied through Linear's document-patch API, so a decision touches only what it changes, the rest of the document is provably untouched, and the diff is legible in Linear's own history. Patches apply atomically per document — if an anchor no longer matches, the document changed underneath the run and that document's sections are re-fetched rather than being overwritten with stale content.
+
+`doc-sync-verifier` gates every revision on a **different model family** from the one that wrote it, the same split used for code and design verification. It checks faithfulness (does the patch say what was decided, not a generalised or softened version), containment (is every edit traceable to the decision, or did neighbouring prose get tidied), cascade completeness (walking the heading index itself, looking for what's *missing*), internal consistency (does anything else in the document now contradict the revision), and document remit (technical detail leaking into the repo-agnostic Spec). It also checks that every anchor matches exactly once, since a bad anchor silently aborts a whole document's save.
+
+Two boundaries are deliberate. **A sync never widens the run's scope** — writing something into the Plan doesn't authorise building it, and work a decision adds belongs to a later issue. And **`implement-project` never creates or re-slices issues**: it patches the Plan, reports that the issue set has drifted, and re-slicing stays a `plan-project` run, because slicing needs the whole picture and this pipeline deliberately never has it.
 
 ## Agents at a glance
 
@@ -162,6 +211,8 @@ The repair loop has a narrow auto-fix lane: clear-cut mechanical defects (lint, 
 | `build` (built-in) | `all` | C | `implement-project` | Writes the actual code for one repo leg | **All tools enabled** — the one unrestricted agent; bounded by prompt + verifier, not permissions |
 | `code-verifier` | `subagent` | **A-gate** | `implement-project` | Checks code vs. spec, checklist, and scope boundary — over- and under-implementation weighted equally | Read-only, `bash` off — so it never re-runs tests, only judges the report |
 | `repo-ops` | `subagent` | C | `implement-project` | Sole git/GitHub surface: branch, commit, push, PR — one action per call | **Only agent with `bash`**, via a git/gh allowlist; `write`/`edit`/`patch` off |
+| `doc-syncer` | `subagent` | **A-gen** | `implement-project`, `plan-project` | Turns a decision into anchored doc patches, and names every section it cascades to | Same restricted set as `spec-drafter` |
+| `doc-sync-verifier` | `subagent` | **A-gate** | `implement-project`, `plan-project` | Gates each revision: faithful to the decision, contained, cascade-complete, internally consistent | Same restricted set as `spec-drafter` |
 
 ## Configuration
 
@@ -181,11 +232,13 @@ Every agent's model is assigned in one place — [`opencode.json`](../opencode.j
 
 | Tier | Model | Agents | Why |
 |---|---|---|---|
-| **A-gen** | `opencode-go/mimo-v2.5-pro` | `spec-drafter`, `plan-synthesizer`, `slice-planner`, `design-drafter` | The hardest generative reasoning — the documents everything downstream is derived from. Each runs once per stage, so the cost is bounded. |
-| **A-gate** | `opencode-go/muse-spark-1.2-contributor` | `design-verifier`, `code-verifier` | Adversarial verification, deliberately a *different family* from whatever produced the work — a verifier running the same model that wrote the thing tends to rationalize its mistakes rather than catch them. |
+| **A-gen** | `opencode-go/mimo-v2.5-pro` | `spec-drafter`, `plan-synthesizer`, `slice-planner`, `design-drafter`, `doc-syncer` | The hardest generative reasoning — the documents everything downstream is derived from. Each runs once per stage, so the cost is bounded; `doc-syncer` is the exception and runs once per decision. |
+| **A-gate** | `opencode-go/muse-spark-1.2-contributor` | `design-verifier`, `code-verifier`, `doc-sync-verifier` | Adversarial verification, deliberately a *different family* from whatever produced the work — a verifier running the same model that wrote the thing tends to rationalize its mistakes rather than catch them. |
 | **C** | `opencode-go/mimo-v2.5` | `technical-design`, `plan-project`, `implement-project`, `design-scout`, `repo-scout`, `scope-resolver`, `issue-writer`, `repo-ops`, `build` | Everything else: orchestration, code investigation, code-writing, and mechanical work. |
 
-**The A-gen / A-gate split runs in this direction on purpose.** Drafting gets MiMo Pro and validation gets Muse Spark, so both gates stay cross-family: `code-verifier` (Muse Spark) checks code written by `build` (MiMo), and `design-verifier` (Muse Spark) checks a draft written by `design-drafter` (MiMo Pro). Swapping them would put a MiMo verifier on MiMo-written code — exactly the self-rationalizing setup the split exists to avoid.
+**The A-gen / A-gate split runs in this direction on purpose.** Drafting gets MiMo Pro and validation gets Muse Spark, so all three gates stay cross-family: `code-verifier` (Muse Spark) checks code written by `build` (MiMo), `design-verifier` (Muse Spark) checks a draft written by `design-drafter` (MiMo Pro), and `doc-sync-verifier` (Muse Spark) checks a patch written by `doc-syncer` (MiMo Pro). Swapping them would put a MiMo verifier on MiMo-written code — exactly the self-rationalizing setup the split exists to avoid.
+
+**`doc-syncer` sits at A-gen because a doc revision is a document, not a diff.** It's writing the sentence the next issue gets planned against, in the voice of a document it can only see part of, while resisting the pull to tidy up neighbouring prose — that's the same class of work as drafting the spec in the first place, and cheaper models handle it by paraphrasing more broadly than the decision warrants. Its verifier is where the real protection is, though: faithfulness and cascade-completeness are checkable properties, which is exactly what an adversarial gate is good at.
 
 **Code-writing (`build`) runs on tier C by choice**, not by oversight: MiMo-V2.5 is a coding-oriented model, and the pipeline is deliberately structured so cheap generation is safe — `scope-resolver` hands it a checklist that requires no judgment calls, and `code-verifier` checks the result far more strictly than the model that produced it. Generate cheap, verify hard, repair in a loop. The corollary is that the verifier and the repair loop carry real weight here — if `build` starts needing several repair rounds per issue, moving it up a tier is a one-line change in [`opencode.json`](../opencode.json).
 
@@ -193,8 +246,8 @@ The three primary orchestrators sit in tier C alongside the mechanical agents on
 
 Two things worth knowing:
 
-- **Three models across 15 agents, deliberately.** An earlier version spread five models from five families across four tiers; it collapsed because the expensive members cost far more than the capability gap justified — `kimi-k3` at $3/$15 per Mtok, `grok-4.5` at $2/$6, and `qwen3.8-max` (Go-exclusive, unpriced publicly, but its `qwen3.7-max` sibling is $2.50/$7.50). Those prices come from OpenCode's published per-token table, not from inferring capability out of request allocations as the first cut did.
-- **Fan-out multiplies spend.** `repo-scout` ×2, `design-scout` ×2, `code-verifier` ×2, and `issue-writer` ×N-slices all run per-unit, against Go's dollar-based limits ($12/5h, $30/week, $60/month). A cross-repo implementation run is the worst case — and since only six agents sit above tier C, that's where spend concentrates now. If it ever needs cutting, weaken the drafting tier before the gates.
+- **Three models across 17 agents, deliberately.** An earlier version spread five models from five families across four tiers; it collapsed because the expensive members cost far more than the capability gap justified — `kimi-k3` at $3/$15 per Mtok, `grok-4.5` at $2/$6, and `qwen3.8-max` (Go-exclusive, unpriced publicly, but its `qwen3.7-max` sibling is $2.50/$7.50). Those prices come from OpenCode's published per-token table, not from inferring capability out of request allocations as the first cut did.
+- **Fan-out multiplies spend, and Stage D adds a second axis of it.** `repo-scout` ×2, `design-scout` ×2, `code-verifier` ×2, and `issue-writer` ×N-slices all run per-unit, against Go's dollar-based limits ($12/5h, $30/week, $60/month). Stage D multiplies differently: `doc-syncer` + `doc-sync-verifier` run once per *decision*, plus once more per cascade round and per verifier concern. A contentious implementation run — four decisions, each cascading once — is roughly a dozen tier-A calls on top of the code work, so an implementation run with real disagreement in it is now the worst case rather than a cross-repo one. That's the intended trade: the alternative is planning the next issue against a document that's quietly wrong. If it ever needs cutting, batch decisions harder before weakening the gate, and weaken the drafting tier before the gates.
 
 ## Design principles
 
@@ -208,13 +261,19 @@ Two things worth knowing:
 - **Write power is narrow and split by kind** — `repo-ops` is the only agent with `bash`, scoped to a git/gh allowlist, and it cannot edit files; everything that reasons about code can't land it. Delegation is bounded the same way: each primary's `permission.task` allowlist names its own subagents and denies the rest. Where a boundary is only instructed rather than enforced (the built-in `build` agent has all tools), say so out loud and give the verifier a check for it.
 - **Centralized I/O** — only each primary agent talks to Linear or the user; subagents are stateless drafting/investigation functions.
 - **Stateful via Linear, not via memory** — each agent's "state" is just what's already posted in Linear, so any session can resume it correctly.
+- **A decision is not made until it's written down** — every decision taken after a document was posted is patched back into every document it reaches, inside the stage that produced it, gated by a cross-family verifier. The conversation ends; the documents are what the next issue gets planned against. This is the one place the pipeline runs backwards, and it's deliberate.
+- **Record before you revise** — the durable record of a decision lands on the Linear issue before any document is touched, so a session that dies mid-sync loses the edit and never the decision. A later run looks for the unfinished record and completes it.
+- **Patch, never rewrite, a document someone else may have changed** — anchored patches touch only what the decision changes, keep the rest provably untouched, and fail loudly when the document moved underneath the run. The one exception is `technical-design`, which authors its whole document through a draft/verify loop; it carries the burden of preserving synced decisions explicitly instead.
 - **Self-validated output** — every agent and subagent file states an explicit Goal plus a self-check checklist it must pass before returning or posting. That checklist is the actual definition of done, not just a list of steps to follow.
 
 ## Out of scope (for now)
 
 - `Clarification` and `Validation` pipeline stages.
 - Automatic hand-off from `technical-design` to `plan-project` — run them separately for now; noted as a future direction.
-- Triggering either agent from a Linear mention.
+- Triggering any of the three agents from a Linear mention.
+- **Automatic re-slicing after a decision changes scope.** `implement-project` patches the Plan and reports that the issue set has drifted; turning that into new or resized issues is a `plan-project` run, because slicing needs the whole picture and the implementation pipeline deliberately never has it.
+- **Detecting drift that predates this mechanism.** Stage D keeps documents true from the moment it's in place; it doesn't audit a project whose decisions were already lost before it existed. There's no reconciliation pass that diffs a Plan against shipped code — for a project already mid-flight, the honest starting point is one `plan-project` run over the current docs.
+- **Syncing anything but the three project documents.** The WWW, Pitch and Solution Brief are human-authored intake and stay that way; a decision that contradicts the Solution Brief is surfaced, never patched into it.
 - Automatic approval detection in `plan-project` (e.g. polling Linear comments) — the approval gate is a live question today.
 - Merging. `implement-project` opens a PR and stops; both repos require human review (nexus: 2 approvals; eventinc: tribe labels + staging QA), and Done means merged.
 - Enforcing the "code-writer must not touch git" boundary at the permission level — it's instructed per invocation, with `code-verifier`'s stray-git-state check as the backstop. Clamping the built-in `build` agent's tools isn't narrowly possible: built-in agents are only configurable via `opencode.json`, so restricting it there would also restrict it for everyday direct use in this workspace. Note this applies to `build`'s *tools* only — the other half of the boundary, which agents each primary may delegate to, **is** enforced: all three primaries carry a `permission.task` allowlist naming their own subagents, and everything else is denied.

@@ -25,7 +25,7 @@ If any check fails, revise before returning.
 
 ## Input
 
-The Solution Brief (authoritative), WWW and Pitch (background/context — Solution Brief wins on conflict), every resolved `design-scout` report, and the current template skeleton. When revising: also the prior draft, plus either answers to your own previously-raised open questions, or `design-verifier` findings together with the user's decision on how to resolve each one.
+The Solution Brief (authoritative), WWW and Pitch (background/context — Solution Brief wins on conflict), every resolved `design-scout` report, and the current template skeleton. When revising: also the prior draft, plus either answers to your own previously-raised open questions, or `design-verifier` findings together with the user's decision on how to resolve each one. You may also be given decisions made during implementation that were already written into the posted document — those are settled fact backed by shipped code, and the revision must preserve them unless the user explicitly decided to change one.
 
 ## Output
 
@@ -38,4 +38,5 @@ Two things, clearly separated:
 
 - Never invent a technical decision to fill a template section — that's an open question, not your call to make unilaterally.
 - When revising because of `design-verifier` findings: apply exactly the user's decision for each finding; don't reinterpret or soften it.
+- Never drop or contradict a decision that was already synced into the posted document during implementation. If your revision can't hold both that decision and what you've been asked to change, that's an open question, not something to resolve by picking one.
 - Don't repeat the Solution Brief/WWW/Pitch verbatim; reference what you're building on, then say what's new.

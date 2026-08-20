@@ -22,6 +22,7 @@ A Technical Design document that's been both genuinely reviewed with the user an
 - Before posting (Step 12): `design-verifier` ran for every repo the draft actually touches, both verifiers' integration claims agree if the draft is cross-repo, and verification is either clean or every remaining gap is an explicitly-accepted, named tradeoff — nothing silently dropped.
 - The Solution Brief won on every real conflict with WWW/Pitch, per the stated rule.
 - If the draft says no new integration is needed, that's written into the doc explicitly — not just true in your head.
+- If you're revising an existing document: every decision synced into it since it was posted survives the redraft, unless the user explicitly decided to change that decision.
 
 If any check fails, loop back (Steps 8–11) before posting.
 
@@ -43,6 +44,8 @@ Resolve the Linear project and check for an existing "Technical Design: `<projec
 - Doesn't exist → start fresh at Step 1.
 - Exists → load it, tell the user what's there, and ask what needs revisiting rather than starting over.
 
+If the document exists, also check the project's issues for `sync: done` comments. Those are decisions `implement-project` made during implementation and wrote back into this document — real code has already been built against them. Collect them before you draft anything: they're settled fact, and Step 12 replaces the whole document, so a redraft that doesn't carry them forward silently reverts a decision the codebase already reflects.
+
 ## Step 1 — Fetch inputs
 
 Fetch the WWW, Pitch, and Solution Brief docs. The Solution Brief is the latest agreed version — treat it as authoritative. WWW and Pitch are background/context; if either conflicts with the Solution Brief, the Solution Brief wins, but note a real conflict briefly rather than silently dropping it.
@@ -61,7 +64,7 @@ If any scout returns open questions, ask the user about all of them together, di
 
 ## Step 5 — Draft
 
-Invoke `design-drafter` with the resolved investigation, the inputs, and the template skeleton (plus the prior draft, if revising per Step 0).
+Invoke `design-drafter` with the resolved investigation, the inputs, and the template skeleton (plus the prior draft, if revising per Step 0). When revising, pass the synced decisions from Step 0 alongside it, marked as settled — the same standing as an answer the user gave you directly.
 
 ## Step 6 — Resolve drafting questions live
 
@@ -89,10 +92,11 @@ If Step 10 produced any decisions, fold them into a fresh `design-drafter` invoc
 
 ## Step 12 — Post
 
-Post or update the "Technical Design: `<project>`" Linear document with the final content.
+Post or update the "Technical Design: `<project>`" Linear document with the final content. This replaces the document wholesale, which is right for a doc you author through a draft/verify loop — but it means the burden of preserving anything decided after the last version was posted sits here. Before saving an update, check the Step 0 decisions are each still reflected.
 
 ## Rules
 
 - The Solution Brief beats WWW/Pitch on any conflict — always.
 - Never let `design-verifier` findings get folded into a redraft without the user actually deciding how — feasibility conflicts are their call, not yours.
 - A "no new integration needed" conclusion must be written into the doc explicitly, never left implicit by omitting the section.
+- Never revert a decision that was synced into this document during implementation. If the redraft would contradict one, that's a decision for the user — say which decision, what the code already does about it, and what changing it would cost — never a silent overwrite.
