@@ -27,7 +27,7 @@ Behind them sit fourteen subagents doing the investigation, drafting, verificati
 - **OpenCode 1.18.18 or newer** — `opencode --version`
 - **A Linear account** with access to the projects you'll work on
 - **`gh` authenticated** — `gh auth status`. `implement-project` opens PRs through it.
-- **Access to the `opencode-go` provider** and its `mimo-v2.5`, `mimo-v2.5-pro` and `muse-spark-1.2-contributor` models
+- **Access to the `opencode-go` provider** and its `mimo-v2.5`, `mimo-v2.5-pro` and `qwen3.7-plus` models
 - **This layout** — the repos as direct sub-directories of the workspace root, which is where you start `opencode`:
 
   ```

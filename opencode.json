@@ -29,13 +29,13 @@
     },
 
     "design-verifier": {
-      "model": "opencode-go/muse-spark-1.2-contributor"
+      "model": "opencode-go/qwen3.7-plus"
     },
     "code-verifier": {
-      "model": "opencode-go/muse-spark-1.2-contributor"
+      "model": "opencode-go/qwen3.7-plus"
     },
     "doc-sync-verifier": {
-      "model": "opencode-go/muse-spark-1.2-contributor"
+      "model": "opencode-go/qwen3.7-plus"
     },
 
     "technical-design": {

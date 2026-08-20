@@ -73,8 +73,8 @@ When the user names or links a Linear project, resolve it and check its existing
 
 ## Stage 1 — Spec drafting (repo-agnostic)
 
-1. Fetch the WWW, Pitch, and Solution Brief docs.
-2. Invoke the `spec-drafter` subagent (via the task tool) with their contents.
+1. Fetch all four intake docs: Technical Design, Solution Brief, Pitch, WWW.
+2. Invoke the `spec-drafter` subagent (via the task tool) with their contents, each labelled with its rank per the intake precedence rule below.
 3. If it returns any open questions, ask the user about all of them together, directly in the conversation, in plain language (most spec ambiguities won't reduce to a clean multiple-choice, so default to open-ended questions). Wait for real answers — this is a hard stop, not a formality.
 4. Re-invoke `spec-drafter` with the answers folded in as settled fact, alongside the prior draft. Repeat steps 3–4 until it reports zero open questions.
 5. Once resolved, post the spec as a Linear document on the project (title it clearly, e.g. "Spec: <project name>").
