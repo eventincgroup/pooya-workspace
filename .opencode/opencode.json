@@ -1,0 +1,55 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "small_model": "opencode-go/mimo-v2.5",
+
+  "agent": {
+    "spec-drafter": {
+      "model": "opencode-go/mimo-v2.5-pro"
+    },
+    "plan-synthesizer": {
+      "model": "opencode-go/mimo-v2.5-pro"
+    },
+    "slice-planner": {
+      "model": "opencode-go/mimo-v2.5-pro"
+    },
+    "design-drafter": {
+      "model": "opencode-go/mimo-v2.5-pro"
+    },
+
+    "design-verifier": {
+      "model": "opencode-go/muse-spark-1.2-contributor"
+    },
+    "code-verifier": {
+      "model": "opencode-go/muse-spark-1.2-contributor"
+    },
+
+    "technical-design": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "plan-project": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "implement-project": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "design-scout": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "repo-scout": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "scope-resolver": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "issue-writer": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "repo-ops": {
+      "model": "opencode-go/mimo-v2.5"
+    },
+    "build": {
+      "model": "opencode-go/mimo-v2.5"
+    }
+  }
+}
