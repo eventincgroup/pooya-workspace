@@ -65,9 +65,11 @@
 
     "build": {
       "mode": "all",
-      "model": "opencode-go/mimo-v2.5"
+      "model": "opencode-go/qwen3.7-plus",
+      "steps": 15
     },
     "plan": {
+      "model": "opencode-go/qwen3.7-plus",
       "mode": "all"
     }
   }
