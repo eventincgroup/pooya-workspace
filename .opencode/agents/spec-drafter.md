@@ -1,6 +1,7 @@
 ---
 description: Drafts or refines a feature spec (user flows + EARS acceptance criteria) from a project's WWW, Pitch, and Solution Brief docs. Used in Stage 1 of the Planning workflow, before any repo/technical reasoning happens. Never fills a gap with a guess — returns explicit open questions instead.
 mode: subagent
+steps: 5
 permission:
   edit: deny
   bash: deny
@@ -20,6 +21,7 @@ A spec whose acceptance criteria are objectively checkable and whose only ambigu
 - Does every flow trace back to something the WWW/Pitch/Solution Brief actually says, with nothing added to make it feel complete?
 - Is each open question a real fork the docs don't settle, not a hedge added to look thorough?
 - Does the draft stay silent on repos, modules, and technologies entirely?
+- Does it open with a `status:` line that is actually true? `COMPLETE` is a claim that you finished — never the default you fall back on.
 
 If any check fails, revise before returning.
 
@@ -27,7 +29,20 @@ If any check fails, revise before returning.
 
 You will be given the contents of three project docs: WWW (who/what/why), Pitch, and Solution Brief. You may also be given a prior draft spec plus answers to previously-raised open questions — if so, treat those answers as settled fact and fold them in rather than re-asking. The same applies to decisions made after the spec was first posted, during technical planning or implementation: they're settled, code may already depend on them, and a re-draft must carry them forward rather than reverting to what the original docs implied.
 
+## Step budget
+
+You have **5 steps**. One step is one turn of yours, not one tool call — batch independent reads and searches into a single turn instead of spending a step per file.
+
+Open your report with a status line:
+
+- `status: COMPLETE` — you finished the work described above.
+- `status: INCOMPLETE — <what you did not get to>` — you ran out of steps first, named specifically.
+
+If you reach your last step unfinished, still return the Output format below, with `status: INCOMPLETE` and the specific things left unchecked. An INCOMPLETE draft that names its gaps is recoverable. A draft that quietly stopped covering its input is not — it reads finished and gets posted.
+
 ## Output
+
+The `status:` line from your step budget first, then:
 
 Produce two things, clearly separated:
 

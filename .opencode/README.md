@@ -194,37 +194,68 @@ Two boundaries are deliberate. **A sync never widens the run's scope** — writi
 
 ## Agents at a glance
 
-| Agent | Mode | Tier | Used by | Role | Notable permissions |
-|---|---|---|---|---|---|
-| `technical-design` | `primary` | C | — (entry point) | Orchestrates Technical Design drafting end to end | `edit`/`bash` denied |
-| `design-scout` | `subagent` | C | `technical-design` | Early investigation: candidate areas + design questions, per repo | Only `read`/`glob`/`grep` allowed, with `plan-project`'s `repo-scout` |
-| `design-drafter` | `subagent` | **A-gen** | `technical-design` | Drafts/redrafts the doc per the template | `edit`/`bash`/`task`/`webfetch`/`websearch` denied |
-| `design-verifier` | `subagent` | **A-gate** | `technical-design` | Late feasibility gate: draft's claims vs. real code, per repo | Only `read`/`glob`/`grep` allowed |
-| `plan-project` | `primary` | C | — (entry point) | Orchestrates spec → plan → task breakdown end to end | `edit`/`bash` denied |
-| `spec-drafter` | `subagent` | **A-gen** | `plan-project` | Drafts the repo-agnostic spec | `edit`/`bash`/`task`/`webfetch`/`websearch` denied |
-| `repo-scout` | `subagent` | C | `plan-project` | Judges one repo's relevance to the spec + Technical Design | Only `read`/`glob`/`grep` allowed |
-| `plan-synthesizer` | `subagent` | **A-gen** | `plan-project` | Merges scout reports into the cross-repo plan | Same restricted set as `spec-drafter` |
-| `slice-planner` | `subagent` | **A-gen** | `plan-project` | Single-pass vertical-slice breakdown | Same restricted set as `spec-drafter` |
-| `issue-writer` | `subagent` | C | `plan-project` | Formats one slice into a scope-only Linear issue (references Spec/Plan, never restates them) | Same restricted set as `spec-drafter` |
-| `implement-project` | `primary` | C | — (entry point) | Orchestrates next-issue or whole-project implementation end to end | `write`/`edit`/`patch`/`bash` tools off |
-| `scope-resolver` | `subagent` | C | `implement-project` | Resolves scope + references into a concrete, ordered checklist with cross-repo handoff contracts | Read-only: keeps `read`/`glob`/`grep`/`list`, everything else off |
-| `build` (built-in) | `all` | C | `implement-project` | Writes the actual code for one repo leg | **All tools enabled** — the one unrestricted agent; bounded by prompt + verifier, not permissions |
-| `code-verifier` | `subagent` | **A-gate** | `implement-project` | Checks code vs. spec, checklist, and scope boundary — over- and under-implementation weighted equally | Read-only, `bash` off — so it never re-runs tests, only judges the report |
-| `repo-ops` | `subagent` | C | `implement-project` | Sole git/GitHub surface: branch, commit, push, PR — one action per call | **Only agent with `bash`**, via a git/gh allowlist; `write`/`edit`/`patch` off |
-| `doc-syncer` | `subagent` | **A-gen** | `implement-project`, `plan-project` | Turns a decision into anchored doc patches, and names every section it cascades to | Same restricted set as `spec-drafter` |
-| `doc-sync-verifier` | `subagent` | **A-gate** | `implement-project`, `plan-project` | Gates each revision: faithful to the decision, contained, cascade-complete, internally consistent | Same restricted set as `spec-drafter` |
+| Agent | Mode | Tier | Steps | Used by | Role | Notable permissions |
+|---|---|---|:---:|---|---|---|
+| `technical-design` | `primary` | C | — | — (entry point) | Orchestrates Technical Design drafting end to end | `edit`/`bash` denied |
+| `design-scout` | `subagent` | C | 6 | `technical-design` | Early investigation: candidate areas + design questions, per repo | Only `read`/`glob`/`grep` allowed, with `plan-project`'s `repo-scout` |
+| `design-drafter` | `subagent` | **A-gen** | 6 | `technical-design` | Drafts/redrafts the doc per the template | `edit`/`bash`/`task`/`webfetch`/`websearch` denied |
+| `design-verifier` | `subagent` | **A-gate** | 8 | `technical-design` | Late feasibility gate: draft's claims vs. real code, per repo | Only `read`/`glob`/`grep` allowed |
+| `plan-project` | `primary` | C | — | — (entry point) | Orchestrates spec → plan → task breakdown end to end | `edit`/`bash` denied |
+| `spec-drafter` | `subagent` | **A-gen** | 5 | `plan-project` | Drafts the repo-agnostic spec | `edit`/`bash`/`task`/`webfetch`/`websearch` denied |
+| `repo-scout` | `subagent` | C | 6 | `plan-project` | Judges one repo's relevance to the spec + Technical Design | Only `read`/`glob`/`grep` allowed |
+| `plan-synthesizer` | `subagent` | **A-gen** | 5 | `plan-project` | Merges scout reports into the cross-repo plan | Same restricted set as `spec-drafter` |
+| `slice-planner` | `subagent` | **A-gen** | 5 | `plan-project` | Single-pass vertical-slice breakdown | Same restricted set as `spec-drafter` |
+| `issue-writer` | `subagent` | C | 3 | `plan-project` | Formats one slice into a scope-only Linear issue (references Spec/Plan, never restates them) | Same restricted set as `spec-drafter` |
+| `implement-project` | `primary` | C | — | — (entry point) | Orchestrates next-issue or whole-project implementation end to end | `write`/`edit`/`patch`/`bash` tools off |
+| `scope-resolver` | `subagent` | C | 8 | `implement-project` | Resolves scope + references into a concrete, ordered checklist with cross-repo handoff contracts | Read-only: keeps `read`/`glob`/`grep`/`list`, everything else off |
+| `build` (built-in) | `all` | **Exec** | 15 | `implement-project` | Writes the actual code for one repo leg | **All tools enabled** — the one unrestricted agent; bounded by prompt + verifier, not permissions |
+| `code-verifier` | `subagent` | **A-gate** | 8 | `implement-project` | Checks code vs. spec, checklist, and scope boundary — over- and under-implementation weighted equally | Read-only, `bash` off — so it never re-runs tests, only judges the report |
+| `repo-ops` | `subagent` | C | 3 | `implement-project` | Sole git/GitHub surface: branch, commit, push, PR — one action per call | **Only agent with `bash`**, via a git/gh allowlist; `write`/`edit`/`patch` off |
+| `doc-syncer` | `subagent` | **A-gen** | 5 | `implement-project`, `plan-project` | Turns a decision into anchored doc patches, and names every section it cascades to | Same restricted set as `spec-drafter` |
+| `doc-sync-verifier` | `subagent` | **A-gate** | 6 | `implement-project`, `plan-project` | Gates each revision: faithful to the decision, contained, cascade-complete, internally consistent | Same restricted set as `spec-drafter` |
 
 ## Configuration
 
 [`opencode.json`](../opencode.json) carries three things, all of them needed for the pipelines to work on a machine that has nothing set up globally:
 
 - **The Linear MCP server.** Every primary agent is Linear-driven, so this ships with the package rather than being a per-person setup step. It's a remote server with OAuth — each person authenticates on first use and no credentials live in this repo.
-- **`agent.build.mode: "all"`.** This one is load-bearing, not cosmetic. OpenCode's built-in `build` defaults to `mode: primary`, and a primary agent can't be invoked via `task` — so without this line `implement-project` cannot delegate any code-writing and Stage 2 fails outright. `plan` is set the same way for parity; nothing here delegates to it.
+- **`agent.build.mode: "all"`.** This one is load-bearing, not cosmetic. OpenCode's built-in `build` defaults to `mode: primary`, and a primary agent can't be invoked via `task` — so without this line `implement-project` cannot delegate any code-writing and Stage 2 fails outright. `plan` carries the same `mode` — and, since `5b8045f`, the same model — for parity; nothing here delegates to it.
 - **Every agent's model**, below.
 
 It lives at the **workspace root**, not inside `.opencode/`, and that placement is load-bearing. OpenCode reads an `agent` block from `.opencode/opencode.json`, but silently ignores every other top-level key there — `mcp` and `small_model` included, with no warning and no error. Anything beyond per-agent overrides has to sit in the root file to take effect. Check with `opencode debug config` after any change.
 
 Permission maps in the agent files have one sharp edge worth knowing: **later rules override earlier ones**, so a `"*": deny` has to be listed *first* in an allowlist. Listed last it overrides every allow above it and OpenCode drops the tool from the agent entirely — silently, with no error. `repo-ops`'s `bash` allowlist and the primaries' `task` allowlists all depend on this. Verify any change with `opencode debug agent <name>`.
+
+## Step budgets and loop bounds
+
+Every subagent carries a `steps:` line in its own markdown frontmatter — OpenCode's cap on agentic iterations. This is the one knob that deliberately does *not* live in [`opencode.json`](../opencode.json) next to the models: a budget belongs beside the Goal and self-check it has to be spent on, so the two can't drift apart. The exception is `build`, which is built in and has no markdown file, so its `steps: 15` sits in the JSON with its model. Verify any change with `opencode debug agent <name>`.
+
+Three mechanics matter before re-tuning any number:
+
+- **One step is one model turn, not one tool call.** A scout that batches six file reads into a single turn spends one step, not six. The budgets below assume batching; an agent that reads one file per turn will feel them as much tighter than they are.
+- **The counter resets on every user message.** For a subagent — invoked once, runs to completion, returns — `steps` bounds the entire job. For a primary it would bound each *conversational turn* instead, which is why **the three primaries carry no cap**: their turns vary from "answer a question" to "resolve scope, delegate two repo legs, fan out two verifiers, repair", and any number safe for the second is meaningless for the first. Their bound is the 3-round loop limit below, which caps the thing that actually runs away.
+- **At the limit, OpenCode removes the tools and asks for a text summary.** It does not error and it does not fail the call. The agent simply answers with whatever it has.
+
+That third one is why every subagent now opens its report with a **`status:` line**. A step-capped `code-verifier` that runs out of budget gets its tools taken away and is asked to summarize — and "No concerns." is a perfectly natural thing for it to say. The primary would read that as a clean gate and land the PR. So:
+
+- Each subagent's Output begins with `status: COMPLETE` or `status: INCOMPLETE — <what it didn't get to>`, and its self-check includes whether that line is actually true.
+- Each primary treats `INCOMPLETE` — or a missing status line — as a **failed run, never a partial result**: re-invoke once with narrower scope, and if it fails again, that's a scoping decision for the user.
+
+**Every loop runs at most 3 rounds.** `implement-project`'s repair loop and Stage D cascade, `plan-project`'s doc-sync loop, and `technical-design`'s Steps 8–11 all previously read "repeat until clean" with no ceiling. A loop that hasn't converged in three rounds is a scoping problem, not a persistence problem, so the third failure stops and hands the user what's still standing. Each primary reports how many rounds it took, because a three-round run and a clean one are otherwise indistinguishable in the final report.
+
+| Role | Agents | Steps |
+|---|---|:---:|
+| Scout — search and read one repo | `design-scout`, `repo-scout` | 6 |
+| Scout + planner — reads code to ground a checklist | `scope-resolver` | 8 |
+| Auditor — checks work against real code | `code-verifier`, `design-verifier` | 8 |
+| Auditor — checks a patch against text it was handed | `doc-sync-verifier` | 6 |
+| Drafter — reasons over inputs and writes a document | `design-drafter` (6), `spec-drafter`, `plan-synthesizer`, `slice-planner`, `doc-syncer` | 5–6 |
+| Formatter — shapes one handed-over slice | `issue-writer` | 3 |
+| Mechanical — one git action per invocation | `repo-ops` | 3 |
+| Executor — writes the code for one repo leg | `build` | 15 |
+| Orchestrator — resets per turn, bounded by loop limits instead | the three primaries | — |
+
+There is no test-runner tier yet. `bash` is denied everywhere except `repo-ops`'s git/gh allowlist, and `build` runs tests inside its own 15 — so if a dedicated debugger agent ever lands, it's the one that should sit in the 12–20 range rather than sharing `build`'s budget.
 
 ## Model policy
 
@@ -234,15 +265,18 @@ Every agent's model is assigned in one place — [`opencode.json`](../opencode.j
 |---|---|---|---|
 | **A-gen** | `opencode-go/mimo-v2.5-pro` | `spec-drafter`, `plan-synthesizer`, `slice-planner`, `design-drafter`, `doc-syncer` | The hardest generative reasoning — the documents everything downstream is derived from. Each runs once per stage, so the cost is bounded; `doc-syncer` is the exception and runs once per decision. |
 | **A-gate** | `opencode-go/qwen3.7-plus` | `design-verifier`, `code-verifier`, `doc-sync-verifier` | Adversarial verification, deliberately a *different family* from whatever produced the work — a verifier running the same model that wrote the thing tends to rationalize its mistakes rather than catch them. |
-| **C** | `opencode-go/mimo-v2.5` | `technical-design`, `plan-project`, `implement-project`, `design-scout`, `repo-scout`, `scope-resolver`, `issue-writer`, `repo-ops`, `build` | Everything else: orchestration, code investigation, code-writing, and mechanical work. |
+| **Exec** | `opencode-go/qwen3.7-plus` | `build` | Code-writing, the only tier that produces artifacts nobody drafted first. Shares the A-gate model since `5b8045f` — see the cross-family note below. The built-in `plan` agent carries the same model for parity; nothing in these pipelines delegates to it. |
+| **C** | `opencode-go/mimo-v2.5` | `technical-design`, `plan-project`, `implement-project`, `design-scout`, `repo-scout`, `scope-resolver`, `issue-writer`, `repo-ops` | Everything else: orchestration, code investigation, and mechanical work. |
 
-**The A-gen / A-gate split runs in this direction on purpose.** Drafting gets MiMo Pro and validation gets Qwen3.7 Plus, so all three gates stay cross-family: `code-verifier` (Qwen) checks code written by `build` (MiMo), `design-verifier` (Qwen) checks a draft written by `design-drafter` (MiMo Pro), and `doc-sync-verifier` (Qwen) checks a patch written by `doc-syncer` (MiMo Pro). Swapping them would put a MiMo verifier on MiMo-written code — exactly the self-rationalizing setup the split exists to avoid.
+**The A-gen / A-gate split runs in this direction on purpose.** Drafting gets MiMo Pro and validation gets Qwen3.7 Plus, so both document gates stay cross-family: `design-verifier` (Qwen) checks a draft written by `design-drafter` (MiMo Pro), and `doc-sync-verifier` (Qwen) checks a patch written by `doc-syncer` (MiMo Pro). Swapping them would put a MiMo verifier on MiMo-written prose — exactly the self-rationalizing setup the split exists to avoid.
+
+**The code gate is the exception, and right now it isn't cross-family.** `build` moved to `qwen3.7-plus` in `5b8045f`, which is the model `code-verifier` already runs — so the one gate covering actual code is a model checking its own output, the exact setup this tier exists to prevent. Two ways back, both one-line edits in [`opencode.json`](../opencode.json): return `build` to `mimo-v2.5` (a coding-oriented model, and the tier it held until then), or move `code-verifier` off Qwen. Until one of them happens, read a clean `code-verifier` result as weaker evidence than the other two gates', and watch `implement-project`'s repair-round count instead — a code path that never needs a second round is more likely an under-reading gate than clean code.
 
 **The A-gate family is Qwen because Muse Spark isn't reachable from here.** `muse-spark-1.2-contributor` held this tier and was cheaper ($0.10/$0.20 per Mtok), but it isn't available in Germany, which makes it unusable for this team — and an unavailable A-gate takes both pipelines down, since every stage ends at a gate. The tier requirement is *not the same family as whatever produced the work*, not any particular vendor, so Qwen satisfies it exactly as Muse Spark did. Don't revert this on cost grounds; the model can't be reached.
 
 **`doc-syncer` sits at A-gen because a doc revision is a document, not a diff.** It's writing the sentence the next issue gets planned against, in the voice of a document it can only see part of, while resisting the pull to tidy up neighbouring prose — that's the same class of work as drafting the spec in the first place, and cheaper models handle it by paraphrasing more broadly than the decision warrants. Its verifier is where the real protection is, though: faithfulness and cascade-completeness are checkable properties, which is exactly what an adversarial gate is good at.
 
-**Code-writing (`build`) runs on tier C by choice**, not by oversight: MiMo-V2.5 is a coding-oriented model, and the pipeline is deliberately structured so cheap generation is safe — `scope-resolver` hands it a checklist that requires no judgment calls, and `code-verifier` checks the result far more strictly than the model that produced it. Generate cheap, verify hard, repair in a loop. The corollary is that the verifier and the repair loop carry real weight here — if `build` starts needing several repair rounds per issue, moving it up a tier is a one-line change in [`opencode.json`](../opencode.json).
+**Code-writing (`build`) sits on `qwen3.7-plus`**, moved there in `5b8045f` alongside its `steps: 15` cap. The structure around it is unchanged and still assumes generation is the half you can afford to redo: `scope-resolver` hands it a checklist that requires no judgment calls, and `code-verifier` is meant to check the result more strictly than whatever produced it. Generate, verify hard, repair in a bounded loop. Two consequences of the move are worth holding onto. It costs the gate rate now — $0.40/$1.60 per Mtok — on every invocation *including* each repair round, so a three-round issue is four `build` calls, not one. And the verify half of "generate, verify hard" is the half that got weaker, per the cross-family note above; the repair loop is now carrying more of the weight than the gate is.
 
 The three primary orchestrators sit in tier C alongside the mechanical agents on purpose: they route and converse, but every judgment that matters is delegated to a tier-A subagent. `small_model` is pinned to `mimo-v2.5` too, so background work (titles, summaries, compaction) never touches the two stronger models. No top-level `model` is set — that would change the workspace default for everyday direct use, and pinning `agent.build.model` already covers code-writing.
 
@@ -266,6 +300,7 @@ Two things worth knowing:
 - **A decision is not made until it's written down** — every decision taken after a document was posted is patched back into every document it reaches, inside the stage that produced it, gated by a cross-family verifier. The conversation ends; the documents are what the next issue gets planned against. This is the one place the pipeline runs backwards, and it's deliberate.
 - **Record before you revise** — the durable record of a decision lands on the Linear issue before any document is touched, so a session that dies mid-sync loses the edit and never the decision. A later run looks for the unfinished record and completes it.
 - **Patch, never rewrite, a document someone else may have changed** — anchored patches touch only what the decision changes, keep the rest provably untouched, and fail loudly when the document moved underneath the run. The one exception is `technical-design`, which authors its whole document through a draft/verify loop; it carries the burden of preserving synced decisions explicitly instead.
+- **Bounded by budget, not only by instruction** — every subagent has a step cap, states it in its own prompt, and reports `status: COMPLETE`/`INCOMPLETE` so a run that ran out of room can never be mistaken for a run that found nothing wrong. Every repair and cascade loop stops after three rounds and hands the rest to the user, because a loop that isn't converging is a scoping problem.
 - **Self-validated output** — every agent and subagent file states an explicit Goal plus a self-check checklist it must pass before returning or posting. That checklist is the actual definition of done, not just a list of steps to follow.
 
 ## Out of scope (for now)

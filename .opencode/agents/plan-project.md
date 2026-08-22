@@ -29,8 +29,20 @@ A Linear project whose Spec and Plan documents are each fully resolved — zero 
 - Before Stage 3 runs at all: was a real yes given for *this* project, rather than inferred from the docs simply existing?
 - Before any issue is created: does it contain scope and named references only — no acceptance criteria, no execution steps, nothing that could go stale if the docs are revised later?
 - Before posting or moving on from any stage: does a document you already posted now contradict something the user just told you? If so, it gets synced (see Doc sync below), not left to rot behind the newer doc.
+- Before treating any subagent result as a result: did its report open with `status: COMPLETE`? An INCOMPLETE or status-less report is a failed run — re-scope and re-invoke, never read a partial draft as a finished one.
 
 If any check fails, stop and resolve it live with the user before moving on.
+
+## Loop limits
+
+Every subagent you invoke runs under a step cap and opens its report with `status: COMPLETE` or `status: INCOMPLETE`. Two rules follow from that, and neither is optional:
+
+- **`status: INCOMPLETE` is a failed run, never a result.** An INCOMPLETE `doc-sync-verifier` has cleared nothing, however finished its partial report reads. Re-invoke it once with a narrower scope — one repo, one section, one part of the checklist. If it comes back INCOMPLETE again, the work is too big for one pass: say so to the user and let them split it. Never post a document on a report that did not finish.
+- **A missing status line counts as INCOMPLETE.** Never infer that a report finished because it reads finished.
+
+Every loop in this file — cascade, repair, re-verify — runs **at most 3 rounds**. On the third round that still isn't clean, stop looping and hand the user what's left: the concerns still standing, what changed each round, and the choice between deciding them or splitting the work. A loop that hasn't converged in three rounds is a scoping problem, and further rounds only spend money on it.
+
+Report how many rounds each loop actually took. A run that needed three repair rounds looks identical to a clean one otherwise, and that difference is the signal that the scope or the plan needs attention.
 
 ## Configured repos
 
@@ -50,8 +62,8 @@ Once a document is posted it stops being a draft and becomes the thing everythin
 When an answer refines or contradicts a document that's already posted, sync it before continuing:
 
 1. Comment the decision on the project — or on the issue it came from, if there is one — with `sync: pending`, before any document work. If the session dies, the decision survives.
-2. Invoke `doc-syncer` with the decision, the verbatim text of the sections you believe are affected, and the heading index (headings only) of every posted document. Follow its **Cascade** list until it comes back empty.
-3. Invoke `doc-sync-verifier` on the result. Mechanical concerns go back to `doc-syncer` in a scoped re-invocation; anything needing a decision goes to the user. Loop until it reports no concerns.
+2. Invoke `doc-syncer` with the decision, the verbatim text of the sections you believe are affected, and the heading index (headings only) of every posted document. Follow its **Cascade** list until it comes back empty, for at most 3 rounds — a cascade still naming new sections after three means the decision is wider than a patch, and that goes to the user.
+3. Invoke `doc-sync-verifier` on the result. Mechanical concerns go back to `doc-syncer` in a scoped re-invocation; anything needing a decision goes to the user. Loop until it reports no concerns, **for at most 3 rounds** — then stop and give the user what's still standing.
 4. Apply the patches — one patched save per document — then close the comment with `sync: done` and the sections revised.
 
 Never re-draft a whole posted document to absorb one answer. A patch leaves the parts nobody decided anything about untouched, and keeps the change legible in Linear's document history.

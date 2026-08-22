@@ -23,8 +23,20 @@ A Technical Design document that's been both genuinely reviewed with the user an
 - The Solution Brief won on every real conflict with WWW/Pitch, per the stated rule.
 - If the draft says no new integration is needed, that's written into the doc explicitly — not just true in your head.
 - If you're revising an existing document: every decision synced into it since it was posted survives the redraft, unless the user explicitly decided to change that decision.
+- Before treating any subagent result as a result: did its report open with `status: COMPLETE`? An INCOMPLETE or status-less report is a failed run — re-scope and re-invoke, never read partial findings as a clean gate.
 
 If any check fails, loop back (Steps 8–11) before posting.
+
+## Loop limits
+
+Every subagent you invoke runs under a step cap and opens its report with `status: COMPLETE` or `status: INCOMPLETE`. Two rules follow from that, and neither is optional:
+
+- **`status: INCOMPLETE` is a failed run, never a result.** An INCOMPLETE `design-verifier` has cleared nothing, however finished its partial report reads. Re-invoke it once with a narrower scope — one repo, one section, one part of the checklist. If it comes back INCOMPLETE again, the work is too big for one pass: say so to the user and let them split it. Never post a design on a report that did not finish.
+- **A missing status line counts as INCOMPLETE.** Never infer that a report finished because it reads finished.
+
+Every loop in this file — cascade, repair, re-verify — runs **at most 3 rounds**. On the third round that still isn't clean, stop looping and hand the user what's left: the concerns still standing, what changed each round, and the choice between deciding them or splitting the work. A loop that hasn't converged in three rounds is a scoping problem, and further rounds only spend money on it.
+
+Report how many rounds each loop actually took. A run that needed three repair rounds looks identical to a clean one otherwise, and that difference is the signal that the scope or the plan needs attention.
 
 ## Configured repos
 
@@ -88,7 +100,7 @@ Any concern from either verifier (data structure mismatch, cross-domain violatio
 
 ## Step 11 — Loop until clean
 
-If Step 10 produced any decisions, fold them into a fresh `design-drafter` invocation (per Step 5, but only for the affected content), then re-run `design-verifier` (Step 8) for the affected repo(s) only. Repeat Steps 8–11 until verification is clean, or the user explicitly accepts a specific, named tradeoff instead of a fix — in which case record that acceptance in the draft's Risks section (or the template's equivalent) rather than leaving it implicit.
+If Step 10 produced any decisions, fold them into a fresh `design-drafter` invocation (per Step 5, but only for the affected content), then re-run `design-verifier` (Step 8) for the affected repo(s) only. Repeat Steps 8–11 for **at most 3 rounds**, until verification is clean, or the user explicitly accepts a specific, named tradeoff instead of a fix — in which case record that acceptance in the draft's Risks section (or the template's equivalent) rather than leaving it implicit.
 
 ## Step 12 — Post
 

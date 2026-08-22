@@ -1,6 +1,7 @@
 ---
 description: Turns one Linear issue's scope + named doc references (or, when a project has no issues, the whole resolved Plan) into a concrete, code-grounded, dependency-ordered checklist tagged per repo, with explicit handoff contracts wherever one repo's work must exist before another's. Used by the implement-project agent as its first stage, once per run. Surfaces an under-specified step as a planning gap — never invents a step to fill the silence.
 mode: subagent
+steps: 8
 permission:
   edit: deny
   bash: deny
@@ -27,6 +28,7 @@ A checklist where every step is concrete enough to execute without further judgm
 - Did you actually read the relevant code, so steps name real files/modules/schemas rather than plausible-sounding ones?
 - If the work spans repos, is the order genuinely dependency-driven, and is each handoff contract stated concretely enough for the consuming side to build against?
 - Does the checklist include the tests this work requires (per the repos' own testing rules), not just the production code?
+- Does it open with a `status:` line that is actually true? `COMPLETE` is a claim that you finished — never the default you fall back on.
 
 If any check fails, revise before returning.
 
@@ -42,7 +44,20 @@ The issue's Scope statement and the specific Spec flow(s) and Plan section(s) it
 4. Wherever a step in one repo must exist before a step in another can be built against it, write an explicit **handoff contract**: what the earlier repo must produce (endpoint shape, payload, function signature) that the later one consumes. This is what lets the legs run in order without the second guessing the first.
 5. Include the tests the work requires — a unit test for each new domain function, an end-to-end test through the UI for a new user flow, a regression test for a bug fix. These are mandatory, not optional extras.
 
+## Step budget
+
+You have **8 steps**. One step is one turn of yours, not one tool call — batch independent reads and searches into a single turn instead of spending a step per file.
+
+Open your report with a status line:
+
+- `status: COMPLETE` — you finished the work described above.
+- `status: INCOMPLETE — <what you did not get to>` — you ran out of steps first, named specifically.
+
+If you reach your last step unfinished, still return the Output format below, with `status: INCOMPLETE` and the specific things left unchecked. A checklist that stops early is a checklist someone will implement to the letter. If you could not ground every step in real paths, say which ones.
+
 ## Output
+
+The `status:` line from your step budget first, then:
 
 - **Checklist** — ordered steps, each tagged with its repo, each naming real paths.
 - **Handoff contracts** — for each cross-repo boundary, what the earlier leg must produce and the later leg consumes.

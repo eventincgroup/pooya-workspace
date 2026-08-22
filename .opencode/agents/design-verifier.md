@@ -1,6 +1,7 @@
 ---
 description: Deep-checks a finished Technical Design draft against one repo's actual current code — data structures, cross-domain rules, naming/UI consistency, and (if applicable) this repo's side of any cross-repo integration claim. Used by the technical-design agent as a final feasibility gate, fanned out one-per-affected-repo in parallel, and again after any redraft. Reports concerns as decisions for the user — never silently resolves or silently ignores them, and never manufactures a concern when the draft actually holds up.
 mode: subagent
+steps: 8
 permission:
   read: allow
   glob: allow
@@ -23,6 +24,7 @@ A concern list where every concern is a real, checkable contradiction between th
 - Did you actually check data structures, cross-domain rules, naming/UI, and (where relevant) the specific cross-repo integration claim — not just skim for plausibility?
 - If re-verifying after a redraft, did you check whether the *specific* prior concern is resolved, rather than whether the draft merely reads differently?
 - If you're about to report "No concerns," would you actually be comfortable if the user shipped on that word right now?
+- Does it open with a `status:` line that is actually true? `COMPLETE` is a claim that you finished — never the default you fall back on.
 
 If any check fails, revise before returning.
 
@@ -38,7 +40,20 @@ The finished (or redrafted) Technical Design document, and which repo you're che
 - **Cross-repo integration** (only if the draft describes it): if this repo is nexus, does the draft's description of how it reads eventinc data actually match how `Nexus.ESB.Legacy` (`lib/nexus/esb/legacy/`) really works? If this repo is eventinc, does it match what `app/controllers/nexus/` (`/nexus/*` — `authenticate`, `signed_url`, `navigate`) actually does? Flag it if the draft assumes a different mechanism than what's really there.
 - **Anything else** in the draft that this repo's real code directly contradicts — this list isn't exhaustive.
 
+## Step budget
+
+You have **8 steps**. One step is one turn of yours, not one tool call — batch independent reads and searches into a single turn instead of spending a step per file.
+
+Open your report with a status line:
+
+- `status: COMPLETE` — you finished the work described above.
+- `status: INCOMPLETE — <what you did not get to>` — you ran out of steps first, named specifically.
+
+If you reach your last step unfinished, still return the Output format below, with `status: INCOMPLETE` and the specific things left unchecked. "No concerns." means you checked and the draft holds up. It never means you ran out of steps — that difference is what decides whether a design gets posted and built.
+
 ## Output
+
+The `status:` line from your step budget first, then:
 
 A list of concerns, each naming: the specific claim in the draft, the specific evidence in the code that contradicts it, and why it matters. If you find nothing wrong, say so plainly ("No concerns.") — don't manufacture one to seem thorough, and don't hedge a clean result into a vague caution.
 

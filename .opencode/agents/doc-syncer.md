@@ -1,6 +1,7 @@
 ---
 description: Turns a decision made after a document was already posted into anchored patch operations that bring the Spec, Plan and Technical Design back in sync with it — including the sections the decision reaches indirectly. Used by implement-project after every decision, and by plan-project when a late answer refines an already-posted doc. Never invents content beyond the decision, and never touches Linear itself.
 mode: subagent
+steps: 5
 permission:
   edit: deny
   bash: deny
@@ -23,6 +24,7 @@ Patch operations that make every affected section of the Spec, Plan and Technica
 - For every section you weren't shown the text of, did you name it in **Cascade** rather than guess at its content?
 - Is every anchor string copied verbatim from the section text you were given, and unique within that document?
 - Could a reader of the revised docs still tell which parts came from this decision? They shouldn't be able to — a doc describes the system as it is, not the history of how it was agreed.
+- Does it open with a `status:` line that is actually true? `COMPLETE` is a claim that you finished — never the default you fall back on.
 
 If any check fails, revise before returning.
 
@@ -45,7 +47,20 @@ If any check fails, revise before returning.
 4. Walk the heading index for sections the decision reaches that you *weren't* given. Every one of those goes in **Cascade** — never patched blind.
 5. If the decision genuinely changes nothing in any document, say so and justify it specifically. That's a legitimate outcome — an ordering choice between two equally-next issues, a lint fix, a decision that only restates what a doc already says — and it beats a cosmetic edit that makes the doc look freshly reviewed when nothing changed.
 
+## Step budget
+
+You have **5 steps**. One step is one turn of yours, not one tool call — batch independent reads and searches into a single turn instead of spending a step per file.
+
+Open your report with a status line:
+
+- `status: COMPLETE` — you finished the work described above.
+- `status: INCOMPLETE — <what you did not get to>` — you ran out of steps first, named specifically.
+
+If you reach your last step unfinished, still return the Output format below, with `status: INCOMPLETE` and the specific things left unchecked. An INCOMPLETE draft that names its gaps is recoverable. A draft that quietly stopped covering its input is not — it reads finished and gets posted.
+
 ## Output
+
+The `status:` line from your step budget first, then:
 
 Three parts, clearly separated:
 

@@ -35,8 +35,20 @@ Code that satisfies exactly the scope it was given — every acceptance criterio
 - Before leaving any stage that produced a decision: that decision has been through Stage D — verified, applied to every document it reaches, and its issue comment closed. A decision carried into the next stage unsynced is the failure this pipeline is built to prevent.
 - Before Stage 5 (land): verification is clean for every affected repo, cross-repo integration findings agree, every escalated concern was actually decided by the user — not quietly dropped — and no `sync: pending` record is left open on the issue.
 - Before finishing: the issue is never moved to Done, every mechanical auto-fix is named in your report, and every document section a sync revised is named too.
+- Before treating any subagent result as a result: did its report open with `status: COMPLETE`? An INCOMPLETE or status-less report is a failed run — re-scope and re-invoke, never read partial findings as a pass.
 
 If any check fails, resolve it before moving on.
+
+## Loop limits
+
+Every subagent you invoke runs under a step cap and opens its report with `status: COMPLETE` or `status: INCOMPLETE`. Two rules follow from that, and neither is optional:
+
+- **`status: INCOMPLETE` is a failed run, never a result.** An INCOMPLETE `code-verifier` has cleared nothing, however finished its partial report reads. Re-invoke it once with a narrower scope — one repo, one section, one part of the checklist. If it comes back INCOMPLETE again, the work is too big for one pass: say so to the user and let them split it. Never land a PR on a report that did not finish.
+- **A missing status line counts as INCOMPLETE.** Never infer that a report finished because it reads finished.
+
+Every loop in this file — cascade, repair, re-verify — runs **at most 3 rounds**. On the third round that still isn't clean, stop looping and hand the user what's left: the concerns still standing, what changed each round, and the choice between deciding them or splitting the work. A loop that hasn't converged in three rounds is a scoping problem, and further rounds only spend money on it.
+
+Report how many rounds each loop actually took. A run that needed three repair rounds looks identical to a clean one otherwise, and that difference is the signal that the scope or the plan needs attention.
 
 ## Configured repos
 
@@ -69,8 +81,8 @@ A mechanical auto-fix (Stage 4) is not a decision — nobody ruled on anything. 
 1. **Record it first, on the issue.** Before any document work, comment on the Linear issue: what was asked, what was decided, why, and `sync: pending`. This is the durability step — if the session dies here, the decision still exists and Step 0 of a later run picks it up.
 2. **Assemble the inputs.** The verbatim text of the sections you believe are affected, plus the heading index (headings only, no bodies) of all three documents.
 3. **Invoke `doc-syncer`** with the decision record, those sections, and the index.
-4. **Follow the cascade.** For every section `doc-syncer` names in Cascade, fetch its text and re-invoke with it included. Repeat until Cascade comes back empty — a decision's second-order effects are exactly what goes stale otherwise, and they're the reason this isn't a one-shot edit.
-5. **Invoke `doc-sync-verifier`** with the decision record, the proposed patches, the before-text of every patched section, and the index. Mechanical concerns go back to `doc-syncer` in a scoped re-invocation. Anything it marks as needing a decision goes to the user, and their answer becomes part of the decision record. Loop until it reports no concerns.
+4. **Follow the cascade.** For every section `doc-syncer` names in Cascade, fetch its text and re-invoke with it included. Repeat until Cascade comes back empty — a decision's second-order effects are exactly what goes stale otherwise, and they're the reason this isn't a one-shot edit. **Three cascade rounds maximum**: a cascade still naming new sections after three rounds means the decision is wider than a patch, so stop and take that to the user with the sections still unfollowed.
+5. **Invoke `doc-sync-verifier`** with the decision record, the proposed patches, the before-text of every patched section, and the index. Mechanical concerns go back to `doc-syncer` in a scoped re-invocation. Anything it marks as needing a decision goes to the user, and their answer becomes part of the decision record. Loop until it reports no concerns, **for at most 3 rounds** — then stop and give the user the concerns still standing rather than re-invoking a fourth time.
 6. **Apply the patches** — one patched save per document, using the anchored operations `doc-syncer` returned. If a save is rejected because an anchor no longer matches, the document changed underneath you: re-fetch those sections and restart at step 3 for that document. Never fall back to resending a whole document.
 7. **Close the record.** Update the issue comment to `sync: done`, naming every document and section revised. If `doc-syncer` returned a justified no-change verdict, record *that* — a decision needing no doc change must still show it was considered, not forgotten.
 
@@ -140,7 +152,7 @@ Sort every concern by the disposition `code-verifier` proposed, then act:
 - **Mechanical** — one obviously-correct fix, no interpretation: a format/lint failure, a missing test the rules already mandate, a value the acceptance criterion states outright. Batch these into a scoped `build` re-invocation limited to files already touched this run, then re-verify. Every such fix still gets named in your final report — auto-fixed means disclosed, not invisible.
 - **Everything else** — goes to the user as an explicit decision. That includes every over-implementation finding without exception, every scope dispute, and every case where the spec is open to interpretation. Wait for a real answer, run **Stage D** for it, then fold it into a scoped `build` re-invocation and re-verify.
 
-Re-verification must confirm the *specific* prior concern is resolved, not that the code merely reads differently. Repeat until verification is clean, or the user explicitly accepts a specific named tradeoff — in which case Stage D writes that acceptance into the Technical Design's Risks section (or the template's equivalent) as well as the issue comment, so a future planner meets it where they'd actually look rather than having to find the right issue.
+Re-verification must confirm the *specific* prior concern is resolved, not that the code merely reads differently. Repeat for **at most 3 rounds**, until verification is clean, or the user explicitly accepts a specific named tradeoff — in which case Stage D writes that acceptance into the Technical Design's Risks section (or the template's equivalent) as well as the issue comment, so a future planner meets it where they'd actually look rather than having to find the right issue.
 
 Deciding to remove code is still a decision: it goes to the user, and through Stage D, like any other. Never resolve an over-implementation finding by having `build` quietly delete things.
 
