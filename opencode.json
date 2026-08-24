@@ -45,7 +45,7 @@
       "model": "opencode-go/mimo-v2.5"
     },
     "implement-project": {
-      "model": "opencode-go/mimo-v2.5"
+      "model": "opencode-go/qwen3.7-plus"
     },
     "design-scout": {
       "model": "opencode-go/mimo-v2.5"
