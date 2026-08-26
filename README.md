@@ -1,80 +1,67 @@
 # Agentic Dev Workflow
 
-One OpenCode primary — `project` — takes a Linear project from a rough idea to an open pull request, and later refinements (UX, “it doesn’t work”) back through the docs before the code.
+An OpenCode agent that takes a Linear project from idea to pull request.
 
-The rule that shapes it: **every product ambiguity becomes an explicit question, asked live, and is resolved before anything is written down.** Facts the repo can answer are not questions — the scout goes back to the code.
+Two rules:
 
-And its counterpart: **every decision is written back into the Spec, Plan, and Technical Design before the stage that made it continues.** After a build, a refinement still patches those docs first, then implements only that delta.
+1. **If it is a product choice, it asks you.** It does not guess. If the answer is in the code, it looks there instead of asking.
+2. **Docs stay true.** When something is decided, it updates the Spec, Plan, and Technical Design before it continues. After a build, if you say “this doesn’t work” or want a UX change, it updates those docs first, then fixes only that bit of code.
 
-Everything needed to resume lives in Linear, not in a session.
+State lives in Linear. You can close the session and pick up later.
 
-## How to run it
+## Use it
 
-Tab-cycle to `project` (or your `switch_agent` keybind) and name or link a Linear project.
+1. Start OpenCode from this workspace root.
+2. Switch to the **`project`** agent (Tab, or your switch-agent key).
+3. Name or paste a Linear project.
 
-It reads Linear and matches a declared stage in [`.opencode/pipeline.md`](.opencode/pipeline.md):
+It looks at what already exists in Linear and does the next step:
 
-| Linear has… | It runs |
-|---|---|
-| WWW, Pitch, Solution Brief — no Technical Design yet | **design** |
-| Technical Design, no Spec | **spec** |
-| Spec, no Plan | **plan** |
-| Spec + Plan, you said yes to issues | **slice** |
-| A Todo issue | **build-issue** |
-| Docs exist and you describe a change / something broken | **refine** |
+- No Technical Design yet → writes one (with you).
+- Design is there, no Spec → writes the Spec (*what* the system does).
+- Spec is there, no Plan → writes the Plan (*how* and *where*).
+- Plan is there → asks if you want issues, then cuts them.
+- A Todo issue is ready → builds it and opens a PR.
+- Docs exist and you describe a change or a bug → updates the docs, then the code.
 
-There is no “continue” command. Re-engaging `project` on the same Linear project is how you resume.
+There is no “continue” command. Switch to `project` again on the same Linear project to resume.
 
-You never invoke the subagents directly.
-
-## Prerequisites
-
-- **OpenCode 1.18.18 or newer** — `opencode --version`
-- **A Linear account** with access to the projects you'll work on
-- **`gh` authenticated** — `gh auth status`
-- **Access to the `opencode-go` provider** (`mimo-v2.5`, `mimo-v2.5-pro`, `qwen3.7-plus`)
-- **This layout** — start `opencode` from the workspace root:
-
-  ```
-  workspace/
-  ├── .opencode/       ← constitution, repos, pipeline, agents, template
-  ├── opencode.json    ← models, Linear MCP, build.mode
-  ├── AGENTS.md
-  ├── eventinc/
-  └── nexus/
-  ```
+You do not call the helper agents yourself.
 
 ## Setup
 
-1. Pull this repo so `.opencode/` and `AGENTS.md` sit alongside `eventinc` and `nexus`.
-2. Start `opencode` from the workspace root.
-3. First Linear use: OAuth in the browser. The token is yours; nothing is committed.
-4. Check: `opencode agent list` — you should see `project` (primary), the six custom subagents, and `build (all)`. If `build` says `primary` instead of `all`, see Troubleshooting.
+You need:
 
-## Adding a repo
+- OpenCode 1.18.18 or newer (`opencode --version`)
+- Linear access
+- `gh` logged in (`gh auth status`)
+- The `opencode-go` models
+- `eventinc` and `nexus` as folders next to this repo
 
-Edit [`.opencode/repos.md`](.opencode/repos.md) only (name, path, format/test commands, git convention). That is the only list.
+Then:
 
-## Changing the Technical Design shape
+1. Put `.opencode/` and `AGENTS.md` next to `eventinc/` and `nexus/`.
+2. Run `opencode` from the workspace root.
+3. The first time it uses Linear, approve OAuth in the browser. The token stays on your machine.
+4. Run `opencode agent list`. You should see `project` and `build (all)`. If `build` says `primary`, see [If it breaks](#if-it-breaks).
 
-Edit [`.opencode/templates/technical-design-template.md`](.opencode/templates/technical-design-template.md). Read fresh every design run.
+## Change how it works
 
-## Changing a rule everyone follows
+| You want to… | Edit |
+|---|---|
+| Add a repo | [`.opencode/repos.md`](.opencode/repos.md) only |
+| Change the Technical Design outline | [`.opencode/templates/technical-design-template.md`](.opencode/templates/technical-design-template.md) |
+| Change a shared rule or stage | [`.opencode/constitution.md`](.opencode/constitution.md) or [`.opencode/pipeline.md`](.opencode/pipeline.md) |
+| Change which model an agent uses | [`opencode.json`](opencode.json) (not the agent files) |
 
-Edit [`.opencode/constitution.md`](.opencode/constitution.md) or [`.opencode/pipeline.md`](.opencode/pipeline.md). Do not copy those speeches into agent files.
+How it is put together: [`.opencode/README.md`](.opencode/README.md).
 
-## Re-tier a model
+## If it breaks
 
-All models are in workspace-root [`opencode.json`](opencode.json). Agent files have no `model:` line. See [`.opencode/README.md`](.opencode/README.md#model-policy).
+**`build` shows as `primary`, or `project` cannot write code.** Run OpenCode from the workspace root. `opencode.json` must set `agent.build.mode` to `"all"`.
 
-## Troubleshooting
+**It has no Linear tools.** Finish OAuth: `opencode mcp list`.
 
-**`opencode agent list` shows `build (primary)`, or `project` can't write code.** `opencode.json` must set `agent.build.mode: "all"`. Run OpenCode from the workspace root.
+**A model is missing.** `opencode auth`, then `opencode models opencode-go`.
 
-**The agent says it has no Linear tools.** Finish OAuth: `opencode mcp list`.
-
-**A model is unavailable.** `opencode auth`, then `opencode models opencode-go`.
-
-**An agent refuses to delegate.** `project`'s `permission.task` allowlist names exactly the subagents it may call. Inspect with `opencode debug agent project`.
-
-The full rationale is in [`.opencode/README.md`](.opencode/README.md).
+**It will not call a helper agent.** Check with `opencode debug agent project`.
