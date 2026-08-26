@@ -16,6 +16,8 @@ A task or prompt may explicitly or implicitly reference one or more sub-director
 
 If the prompt does not mention any project by name and the task is not trivially scoped to the current open file, **you must ask the user which codebase(s) the task applies to**. Never assume or guess.
 
+**Exception — Linear projects.** If the user names or links a Linear project (or is clearly running the OpenCode project pipeline), do not ask which codebase. Use the pipeline's configured repos in `.opencode/repos.md` (`eventinc` and `nexus` today).
+
 ### 3. Follow codebase-specific instructions
 
 Every project may define its own AGENTS.md, rules, and skills. Once you have identified which codebase(s) to work in:
@@ -36,14 +38,15 @@ When a task spans multiple codebases:
 
 | Directory | Type | Has AGENTS.md | Has .agents/ rules | Has .agents/ skills | Has .kilo/ | Has .cursor/ |
 |-----------|------|:---:|:---:|:---:|:---:|:---:|
-| `activepieces/` | Deployment config (Docker/Fly.io) | — | — | — | — | — |
 | `architecture-reference/` | Documentation (Markdown) | — | — | — | — | — |
+| `atlas/` | Documentation | — | — | — | — | — |
 | `eventinc/` | Rails API + Next.js frontend | — | — | 2 | Yes | — |
 | `gateway/` | Meteor 3.x + React 18 + TypeScript | Yes | — | — | — | 22 agents, 23 skills |
-| `linear-master/` | Elixir/Phoenix 1.8 | Yes (in `linear_master/`) | — | — | — | — |
-| `nexus/` | Elixir/Phoenix (event management) | Yes | 13 | 3 | — | — |
+| `nexus/` | Elixir/Phoenix (event management) | Yes | 13 | 4 | — | — |
 | `roxie/` | Go microservice (PDF processing) | — | — | — | — | — |
+| `trigger/` | Trigger.dev tasks | Yes | — | 6 | — | — |
 
 ### Usage notes
 
 - **architecture-reference**: Read-only documentation. Do not edit unless explicitly asked.
+- **Linear-to-PR pipeline**: `.opencode/` — constitution, repos, and pipeline files plus the `project` agent. Configured repos for that pipeline are only those listed in `.opencode/repos.md`.
