@@ -11,14 +11,16 @@ Match **from the bottom of the "When" list that applies** — `refine` beats gre
 - **When:** no `Technical Design: <project>` document yet (or the user asked to revisit it).
 - **Needs:** WWW, Pitch, Solution Brief. Solution Brief is authoritative.
 - **Run:**
-  1. `investigate` mode `before-spec` — one per configured repo, in parallel.
-  2. Ask every `kind: product` question. Re-invoke `investigate` for `kind: code`.
-  3. `compose` mode `td` with the template at `.opencode/templates/technical-design-template.md` (read fresh).
-  4. Review the draft with the user.
-  5. `gate` mode `design` — one per affected repo, in parallel.
-  6. Surface concerns as decisions. Loop compose → gate at most 3 rounds.
+  1. Read `.opencode/design-rules.md`.
+  2. `investigate` mode `before-spec` — one per configured repo, in parallel.
+  3. Ask every `kind: product` question. Re-invoke `investigate` for `kind: code`.
+  4. **Routes:** for every user-facing screen and API this feature needs, ask the user for the exact full URL (host + path). Map `localhost:3232` → eventinc (legacy), `localhost:4000` → nexus. Do not invent a route. Stop until the Routes list is complete or the user says a screen/API is out of scope.
+  5. `compose` mode `td` with the template at `.opencode/templates/technical-design-template.md` (read fresh) **and** the collected routes.
+  6. Review the draft with the user.
+  7. `gate` mode `design` — one per affected repo, in parallel. A draft that names a repo with no matching route (or a route with no repo) is a concern.
+  8. Surface concerns as decisions. Loop compose → gate at most 3 rounds.
 - **Produces:** Linear document `Technical Design: <project>`. First authoring may replace the whole document; carry forward every `sync: done` decision.
-- **Stop for:** product questions; verifier concerns; named tradeoffs the user accepts (write those into Risks).
+- **Stop for:** product questions; missing full routes; verifier concerns; named tradeoffs the user accepts (write those into Risks).
 
 ---
 
@@ -92,10 +94,11 @@ If issues exist and `sync: done` comments show the Plan has moved since they wer
 - **Needs:** those three documents + the user's requirement.
 - **Run:**
   1. Load Spec, Plan, and Technical Design. Match the requirement to them.
-  2. Docs already say it, code doesn't → justified no-change on docs, then implement the delta.
-  3. Docs are silent → `compose` mode `patch` + `gate` mode `patch` (cascade like doc-sync), then implement.
-  4. Docs contradict the user → the user's new word is the decision unless it fights the Solution Brief; if it fights the Brief, ask. Then patch, then implement.
-  5. Implement **only this delta**: `scope-resolver` on the patched sections + the requirement (never the whole Plan) → `build` → `gate` mode `code` → `repo-ops`.
+  2. If the change is a user-facing screen or an API, read `.opencode/design-rules.md`. Ask for the exact full URL if the Routes section does not already have it. Map `localhost:3232` → eventinc, `localhost:4000` → nexus.
+  3. Docs already say it, code doesn't → justified no-change on docs, then implement the delta.
+  4. Docs are silent → `compose` mode `patch` + `gate` mode `patch` (cascade like doc-sync), then implement.
+  5. Docs contradict the user → the user's new word is the decision unless it fights the Solution Brief; if it fights the Brief, ask. Then patch, then implement.
+  6. Implement **only this delta**: `scope-resolver` on the patched sections + the requirement (never the whole Plan) → `build` → `gate` mode `code` → `repo-ops`.
 - **Produces:** patched docs (or a recorded no-change) + a PR for the delta. Comment the decision on a follow-up issue or the issue still in review.
 - **Stop for:** product questions; a change that is clearly a new feature / whole new flow (ask whether to run `slice` instead of a delta build); over-implementation of neighbouring plan work.
 

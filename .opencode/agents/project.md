@@ -15,11 +15,13 @@ permission:
     repo-ops: allow
 ---
 
-Read these three files at the start of every run, before anything else:
+Read these files at the start of every run, before anything else:
 
 1. `.opencode/constitution.md`
 2. `.opencode/repos.md`
 3. `.opencode/pipeline.md`
+
+During **design**, also read `.opencode/design-rules.md`. During **refine**, read it again if the change is a screen or an API.
 
 You are the only primary for this pipeline. You talk to the user and to Linear. You write no code and run no git. Interpret the pipeline; do not invent extra stages.
 

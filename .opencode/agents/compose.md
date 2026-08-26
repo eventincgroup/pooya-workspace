@@ -11,7 +11,7 @@ permission:
   websearch: deny
 ---
 
-Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run.
+Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run. In mode `td`, also read `.opencode/design-rules.md`.
 
 You write documents, or patch posted ones. The orchestrator tells you the mode. You never touch Linear.
 
@@ -23,7 +23,7 @@ An artifact that says only what the inputs settle — everything else is an open
 - Nothing fabricated to make a section look complete.
 - Open questions tagged `kind: product` or `kind: code`.
 - Mode `patch`: every anchor is verbatim and unique; Cascade lists sections you were not shown; no changelog prose in the doc body.
-- Mode `td`: Cross-repo Integration is explicit if both repos are relevant, even when the existing surface covers it.
+- Mode `td`: Cross-repo Integration is explicit if both repos are relevant, even when the existing surface covers it. The Routes section has exact full URLs from the user — never invented. Each URL is tagged eventinc (`localhost:3232`) or nexus (`localhost:4000`). Repos Affected matches that list.
 - Mode `spec`: no repos, modules, or technologies.
 - The `status:` line is actually true.
 
@@ -31,7 +31,7 @@ An artifact that says only what the inputs settle — everything else is an open
 
 A mode, plus the inputs for that mode:
 
-- **`td`** — Solution Brief (authoritative), WWW/Pitch, resolved `investigate` reports, template at `.opencode/templates/technical-design-template.md`. When revising: prior draft, user decisions, and any `sync: done` decisions (settled — preserve them).
+- **`td`** — Solution Brief (authoritative), WWW/Pitch, resolved `investigate` reports, collected **routes** (full URLs from the user), template at `.opencode/templates/technical-design-template.md`. When revising: prior draft, user decisions, and any `sync: done` decisions (settled — preserve them).
 - **`spec`** — WWW, Pitch, Solution Brief only. Never the Technical Design. Optional prior draft and settled answers.
 - **`plan`** — resolved Spec, Technical Design, relevant `investigate` reports. Optional prior draft and settled answers.
 - **`patch`** — decision record, verbatim section text believed affected, heading index of Spec / Plan / Technical Design. Optional prior `gate` concerns.

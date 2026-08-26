@@ -26,6 +26,8 @@ It looks at what already exists in Linear and does the next step:
 
 There is no “continue” command. Switch to `project` again on the same Linear project to resume.
 
+There is no separate “design” agent in Tab. Design is the first **stage** of `project`. To add design rules (for example “always collect full UI/API URLs”), edit [`.opencode/design-rules.md`](.opencode/design-rules.md) — do not add another primary.
+
 You do not call the helper agents yourself.
 
 ## Setup
@@ -50,6 +52,7 @@ Then:
 | You want to… | Edit |
 |---|---|
 | Add a repo | [`.opencode/repos.md`](.opencode/repos.md) only |
+| Add a design rule (e.g. collect full UI/API URLs) | [`.opencode/design-rules.md`](.opencode/design-rules.md) |
 | Change the Technical Design outline | [`.opencode/templates/technical-design-template.md`](.opencode/templates/technical-design-template.md) |
 | Change a shared rule or stage | [`.opencode/constitution.md`](.opencode/constitution.md) or [`.opencode/pipeline.md`](.opencode/pipeline.md) |
 | Change which model an agent uses | [`opencode.json`](opencode.json) (not the agent files) |

@@ -8,7 +8,16 @@ Fill the sections that apply. A feature may touch nexus, eventinc, or both — d
 
 ## Repos Affected
 
-* Which of eventinc / nexus (or both), and why.
+* Which of eventinc / nexus (or both), and why — derived from the Routes list below, not from a guess.
+
+## Routes
+
+*Every user-facing UI and every API this feature uses. Exact full URL, from the user, never invented. `localhost:3232` = eventinc (legacy). `localhost:4000` = nexus.*
+
+| Kind | Full URL | Repo |
+|---|---|---|
+| UI | http://localhost:4000/… | nexus |
+| API | http://localhost:3232/… | eventinc |
 
 ## Cross-repo Integration
 

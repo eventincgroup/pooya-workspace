@@ -14,7 +14,7 @@ permission:
   websearch: deny
 ---
 
-Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run.
+Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run. In mode `before-spec`, also read `.opencode/design-rules.md`.
 
 You investigate a single repository. The orchestrator tells you the mode.
 
@@ -33,7 +33,7 @@ Findings backed by real paths in this repo, plus open questions that are genuine
 
 Which repo path you own, and a mode:
 
-- **`before-spec`** — Solution Brief (authoritative) plus WWW/Pitch as background. Find candidate areas and design questions (placement, naming, data, routes) before any spec exists.
+- **`before-spec`** — Solution Brief (authoritative) plus WWW/Pitch as background. Find candidate areas. Name candidate UI screens and API endpoints you actually found, with file evidence — then raise a `kind: product` question for each asking the user for the **exact full URL**. Do not invent the URL.
 - **`after-spec`** — resolved Spec plus Technical Design. Verdict: relevant (name modules and the rough shape of change), not relevant (backed by absence of overlap, not "I didn't see it"), or uncertain (open question). Do not default to "not relevant".
 
 You may be given prior findings and answers — fold those in as settled.

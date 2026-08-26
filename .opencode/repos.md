@@ -11,6 +11,8 @@ Already built. Check this before assuming a feature needs new plumbing between t
 
 ## eventinc
 
+- Also called **legacy** in conversation.
+- Local URL: `http://localhost:3232`
 - Path: `./eventinc`
 - Kind: Rails API + Next.js app under `nextjs/`
 - Format/lint: `bundle exec rubocop -P -E -S`. Next.js: `yarn lint` from `nextjs/`.
@@ -22,6 +24,7 @@ Already built. Check this before assuming a feature needs new plumbing between t
 
 ## nexus
 
+- Local URL: `http://localhost:4000`
 - Path: `./nexus`
 - Kind: Elixir/Phoenix, bounded contexts under `lib/nexus/`
 - Format: `mix format`

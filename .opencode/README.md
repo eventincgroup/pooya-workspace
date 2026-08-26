@@ -1,12 +1,13 @@
 # How the pipeline is built
 
-Three files are the source of truth. Agent files only describe a job (goal, inputs, outputs). They do not repeat the rules.
+Declared files are the source of truth. Agent files only describe a job (goal, inputs, outputs). They do not repeat the rules. Design-only rules live in [`design-rules.md`](design-rules.md) so you can add them without a second Tab agent.
 
 | File | Role |
 |---|---|
 | [`constitution.md`](constitution.md) | Shared rules: ask vs look in code, status line, 3-round cap |
-| [`repos.md`](repos.md) | Repos, commands, git style, how eventinc and nexus already connect |
+| [`repos.md`](repos.md) | Repos, local URLs (`3232` = eventinc, `4000` = nexus), git style |
 | [`pipeline.md`](pipeline.md) | Stages: when to run, what to produce, when to stop and ask you |
+| [`design-rules.md`](design-rules.md) | Extra rules for the **design** stage (and refine of screens/APIs) |
 
 The **`project`** agent reads Linear, picks a stage, and runs it. Helpers never talk to you or to Linear.
 
@@ -42,7 +43,7 @@ flowchart TD
 
 Full detail is in [`pipeline.md`](pipeline.md). Short version:
 
-- **design** — look at both repos, write a Technical Design, check it against the code, post it.
+- **design** — look at both repos, ask you for every full UI and API URL (`3232` = eventinc, `4000` = nexus), write a Technical Design, check it against the code, post it.
 - **spec** — write *what* the system does. No repos or tech. Uses WWW, Pitch, and Solution Brief only.
 - **plan** — write *how* and *where*. If your answer changes the Spec or Design, those docs get patched first.
 - **slice** — only after you say yes. Issues point at the docs; they do not copy them. It will not build the whole plan if you skip this.

@@ -33,7 +33,7 @@ A concern list of real, checkable defects — nothing manufactured when the work
 
 A mode, plus:
 
-- **`design`** — finished Technical Design draft and which repo to check. Check data structures, this repo's boundary rules, naming/UI, and this side of any cross-repo integration claim against `repos.md`.
+- **`design`** — finished Technical Design draft and which repo to check. Check data structures, this repo's boundary rules, naming/UI, and this side of any cross-repo integration claim against `repos.md`. Also check **Routes**: every route tagged this repo should be a `localhost:3232` (eventinc) or `localhost:4000` (nexus) URL that matches `repos.md`; this repo should not be listed under Repos Affected with zero matching routes; a claimed change with no route is a concern.
 - **`code`** — this repo's checklist, spec excerpt, issue Scope, files changed, reported test/format output, other leg's handoff contract if cross-repo. You do **not** get the whole Plan. Also check git state: unexpected commits, staged changes, or a switched branch (landing is `repo-ops`'s job).
 - **`patch`** — decision record, proposed patches, before-text of patched sections, heading index, Cascade list and no-change verdict.
 

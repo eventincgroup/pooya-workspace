@@ -49,4 +49,4 @@ When a task spans multiple codebases:
 ### Usage notes
 
 - **architecture-reference**: Read-only documentation. Do not edit unless explicitly asked.
-- **Linear-to-PR pipeline**: `.opencode/` — constitution, repos, and pipeline files plus the `project` agent. Configured repos for that pipeline are only those listed in `.opencode/repos.md`.
+- **Linear-to-PR pipeline**: `.opencode/` — constitution, repos, pipeline, and design-rules files, plus the `project` agent. Design is a pipeline stage, not a Tab agent; extra design rules go in `.opencode/design-rules.md`. Configured repos for that pipeline are only those listed in `.opencode/repos.md`.

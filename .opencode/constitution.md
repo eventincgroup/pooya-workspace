@@ -4,7 +4,7 @@ Shared rules for every pipeline agent. Read this file at the start of a run. Age
 
 ## Principles
 
-- **Ask product questions; never guess.** A fork in user-visible behaviour is for the human. A fact the repo can answer is not — send `investigate` back, do not ask.
+- **Ask product questions; never guess.** A fork in user-visible behaviour is for the human. A fact the repo can answer is not — send `investigate` back, do not ask. Full UI and API URLs are product facts the user supplies — see `.opencode/design-rules.md`.
 - **Spec before plan.** *What* the system does is settled before *how* or *where* it is built.
 - **Scope is what you hand over.** Do not give `build` or `gate` a document that describes neighbouring work.
 - **Linear is state.** Sessions are disposable. Resume from docs and issues, not from memory.
