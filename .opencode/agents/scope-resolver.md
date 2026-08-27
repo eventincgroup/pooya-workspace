@@ -15,7 +15,7 @@ permission:
   websearch: deny
 ---
 
-Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run.
+Read `.opencode/constitution.md`, `.opencode/repos.md`, and `.opencode/design-rules.md` first if you have not this run. Follow every design rule.
 
 You turn a scope statement plus the doc sections it points at into an ordered checklist that `build` can execute without making product or architecture decisions.
 

@@ -4,10 +4,12 @@ Shared rules for every pipeline agent. Read this file at the start of a run. Age
 
 ## Principles
 
-- **Ask product questions; never guess.** A fork in user-visible behaviour is for the human. A fact the repo can answer is not — send `investigate` back, do not ask. Full UI and API URLs are product facts the user supplies — see `.opencode/design-rules.md`.
+- **Ask product questions; never guess.** A fork in user-visible behaviour is for the human. A fact the repo can answer is not — send `investigate` back, do not ask.
+- **Follow every rule in `.opencode/design-rules.md`.** Every stage, every agent. Add new design constraints there; do not copy them into agent files or `pipeline.yaml`.
 - **Spec before plan.** *What* the system does is settled before *how* or *where* it is built.
 - **Scope is what you hand over.** Do not give `build` or `gate` a document that describes neighbouring work.
 - **Linear is state.** Sessions are disposable. Resume from docs and issues, not from memory.
+- **The pipeline is `.opencode/pipeline.yaml`.** `project` walks that graph. It does not invent hops. Change a stage there.
 - **Split write power.** `build` writes code. Only `repo-ops` touches git. Orchestrators do neither.
 - **A different model family gates the work.** `compose` is A-gen; `gate` is A-gate. Do not treat a clean code gate as free if those models ever share a family again.
 - **A decision is not made until it is written down.** Patch Spec, Plan, and Technical Design before the stage that produced the decision continues. Record `sync: pending` on the issue first.
@@ -41,9 +43,9 @@ Each open question is tagged:
 
 - Product question → ask the user, wait for a real answer, then continue.
 - Code question → re-invoke `investigate` (or the matching read-only role), do not ask.
-- Incomplete → retry once narrower, then stop.
-- Complete and no product questions → continue to the next stage in `.opencode/pipeline.md`.
-- A decision (user ruling, accepted tradeoff, contract that differs from the Plan, over-implementation ruling) runs **doc-sync** before the stage continues: record `sync: pending`, invoke `compose` mode `patch`, follow Cascade at most 3 rounds, invoke `gate` mode `patch`, apply patches, close `sync: done`.
+- Incomplete → run the `incomplete-retry` subgraph in `.opencode/pipeline.yaml`.
+- Complete and no product questions → continue to the next matching stage in `.opencode/pipeline.yaml`.
+- A decision (user ruling, accepted tradeoff, contract that differs from the Plan, over-implementation ruling) runs the **doc-sync** subgraph in `.opencode/pipeline.yaml` before the stage continues.
 - A mechanical auto-fix (lint, missing mandated test, a value the criterion states outright) is not a decision. If the fix was only needed because a document was wrong, that wrongness *is* a decision.
 - Never move an issue to Done. Done means merged.
 - Never force-push. Never skip hooks. Never commit on `main`/`master`.
