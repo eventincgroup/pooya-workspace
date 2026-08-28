@@ -1,15 +1,40 @@
-# **🏛️ Architecture Overview**
+# Architecture Overview
 
 *How does this feature fit into the existing system? What components are involved, created, or modified?*
 
 <Paste a diagram, link to an Figma board, or describe in prose.>
 
-## Domains Affected
+Fill the sections that apply. A feature may touch nexus, eventinc, or both — do not force eventinc work into nexus domain/module headings, and do not omit nexus structure when the work lives there.
+
+## Repos Affected
+
+* Which of eventinc / nexus (or both), and why — derived from the Routes list below, not from a guess.
+
+## Routes
+
+*Every user-facing UI and every API this feature uses. Exact full URL, from the user, never invented. `localhost:3232` = eventinc (legacy). `localhost:4000` = nexus.*
+
+| Kind | Full URL | Repo |
+|---|---|---|
+| UI | http://localhost:4000/… | nexus |
+| API | http://localhost:3232/… | eventinc |
+
+## Cross-repo Integration
+
+*Required whenever both repos are relevant — including when the answer is "the existing surface already covers it."*
+
+Already built, check first: nexus `Nexus.ESB.Legacy` (`lib/nexus/esb/legacy/`) mirrors eventinc models for nexus-side reads; eventinc `app/controllers/nexus/` exposes `/nexus/*` (`authenticate`, `signed_url`, `navigate`) for session/navigation handoff.
+
+* How the two connect for this feature, or why a new mechanism is genuinely needed.
+
+## Domains Affected (nexus)
+
+*When this feature changes nexus bounded contexts.*
 
 * <e.g. Nexus.Negotiation>
   * Changes…
 
-## **Modules Affected**
+## Modules Affected (nexus)
 
 * **Generic Components:**
   * <e.g. Dialog>
@@ -24,7 +49,15 @@
     * Change: <...>
     * Notes: <...>
 
-# 📦 **Data Layer**
+## Areas Affected (eventinc)
+
+*When this feature changes the Rails API and/or the Next.js app.*
+
+* **Rails:** controllers, models, services, jobs — path + change (new / modified / deleted)
+* **Next.js (`nextjs/`):** pages, components, API routes — path + change
+* **Contracts:** serializers, JSON shapes, Salesforce or other side effects
+
+# Data Layer
 
 ## **Schema Changes**
 
@@ -50,7 +83,7 @@ Table: users (modified)
 * <e.g. Index on (user_id, inserted_at) for timeline queries>
 * <e.g. Expected row volume, query patterns, caching strategy>
 
-# **🎎 System Interfaces**
+# System Interfaces
 
 **Internal API Endpoints for other internal systems (e.g. Legacy)**
 
@@ -80,7 +113,7 @@ Table: users (modified)
   * **Purpose:** <e.g. Sync offers>
   * <Notes>
 
-# **🙀 Technical Risks & Constraints**
+# Technical Risks & Constraints
 
 *Engineering-specific concerns not already covered in the Pitch's Risks & Rabbit Holes. Focus on feasibility and system-level concerns.*
 
@@ -89,23 +122,23 @@ Table: users (modified)
   * **Impact:** High
   * **Solution** <e.g. Preload associations, add query analysis to review checklist>
 
-# **🧪 Testing Plan**
+# Testing Plan
 
-## **Coverage Strategy**
+Design-level test risks and the kinds of tests this change needs. Do **not** restate Spec acceptance criteria here — those do not exist until the Spec is posted. Once a Spec exists, link it and add any extra design-level cases the Spec does not cover.
 
-* **Unit:** <scope, e.g. context logic, changesets>
-* **Integration:** <scope, e.g. API endpoints + DB>
-* **End-to-end:** <scope, e.g. critical user flows>
+## Coverage Strategy
 
-## **Critical Test Cases**
+* **Unit:** <scope — nexus: context logic, changesets; eventinc: models, services>
+* **Integration:** <scope — nexus: API + DB; eventinc: request specs>
+* **End-to-end:** <scope — critical user flows in LiveView and/or Next.js>
 
-*This must include at least all items in acceptance criteria:*
+## Critical Test Cases
 
 1. **Happy path:** <scenario> → <expected result>
 2. **Failure / error state:** <scenario> → <expected result> *(edge case)*
-3. <...>
+3. <design-level risks only — not a copy of Spec EARS criteria>
 
-# **🚀 Deployment Plan**
+# Deployment Plan
 
 ## **Infrastructure Changes**
 
