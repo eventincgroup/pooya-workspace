@@ -15,7 +15,7 @@ permission:
   websearch: deny
 ---
 
-Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run.
+Read `.opencode/constitution.md`, `.opencode/repos.md`, and `.opencode/design-rules.md` first if you have not this run. Follow every design rule.
 
 You turn a scope statement plus the doc sections it points at into an ordered checklist that `build` can execute without making product or architecture decisions.
 
@@ -32,7 +32,7 @@ A checklist where every step is executable without further judgment calls, groun
 
 ## Input
 
-The issue's Scope (or the refine requirement) and the specific Spec / Plan / Technical Design **sections** referenced — excerpted, never the whole Plan. Which repos are in play. There is no whole-project mode.
+The issue's Scope (or the refine requirement, or an incident's confirmed plan **comment**) and the specific Spec / Plan / Technical Design **sections** referenced — excerpted, never the whole Plan. For incidents there are no project docs: use the issue plus the confirmed plan comment. Which repos are in play. There is no whole-project mode.
 
 ## What to do
 
@@ -47,7 +47,7 @@ The issue's Scope (or the refine requirement) and the specific Spec / Plan / Tec
 
 - **Checklist** — ordered steps, repo-tagged, real paths.
 - **Handoff contracts** — for each cross-repo boundary.
-- **Open questions** — which step, what is ambiguous, **which document section** leaves it unsettled. If none: "No open questions."
+- **Open questions** — which step, what is ambiguous, **which document section or issue comment** leaves it unsettled. If none: "No open questions."
 
 ## Rules
 

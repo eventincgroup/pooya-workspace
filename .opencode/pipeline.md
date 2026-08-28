@@ -1,105 +1,20 @@
 # Pipeline
 
-Declared stages. The `project` primary reads Linear, matches a row, runs it, and continues when the gate is green. Read `.opencode/constitution.md` and `.opencode/repos.md` with this file.
+Stages live in [`pipeline.yaml`](pipeline.yaml). That file is the only full description. This page is an index.
 
-Match **from the bottom of the "When" list that applies** — `refine` beats greenfield when docs already exist and the user is stating a change.
+`project` walks the yaml. It does not invent hops. Read `.opencode/constitution.md`, `.opencode/repos.md`, and `.opencode/design-rules.md` with it. Apply every design rule on every stage; stop if any is unmet.
 
----
+Match **first `when` in `match_order`** — `refine` is first, so it beats greenfield when docs exist and the user is stating a change.
 
-## design
+| Stage | When | Produces |
+|---|---|---|
+| **refine** | Spec + Plan + Technical Design exist, and you state a change or a bug | Patched docs (or a recorded no-change) + a PR for the delta |
+| **design** | No Technical Design yet (or you asked to revisit it) | Linear document `Technical Design: <project>` |
+| **spec** | Technical Design exists, no Spec | Linear document `Spec: <project>` |
+| **plan** | Spec exists, no Plan | Linear document `Plan: <project>` |
+| **slice** | Spec + Plan exist, no issues reference them yet | Dependency-ordered Linear issues |
+| **build-issue** | A Todo-equivalent (`unstarted`) issue exists | PR per affected repo; issue in in-review (never Done) |
 
-- **When:** no `Technical Design: <project>` document yet (or the user asked to revisit it).
-- **Needs:** WWW, Pitch, Solution Brief. Solution Brief is authoritative.
-- **Run:**
-  1. Read `.opencode/design-rules.md`.
-  2. `investigate` mode `before-spec` — one per configured repo, in parallel.
-  3. Ask every `kind: product` question. Re-invoke `investigate` for `kind: code`.
-  4. **Routes:** for every user-facing screen and API this feature needs, ask the user for the exact full URL (host + path). Map `localhost:3232` → eventinc (legacy), `localhost:4000` → nexus. Do not invent a route. Stop until the Routes list is complete or the user says a screen/API is out of scope.
-  5. `compose` mode `td` with the template at `.opencode/templates/technical-design-template.md` (read fresh) **and** the collected routes.
-  6. Review the draft with the user.
-  7. `gate` mode `design` — one per affected repo, in parallel. A draft that names a repo with no matching route (or a route with no repo) is a concern.
-  8. Surface concerns as decisions. Loop compose → gate at most 3 rounds.
-- **Produces:** Linear document `Technical Design: <project>`. First authoring may replace the whole document; carry forward every `sync: done` decision.
-- **Stop for:** product questions; missing full routes; verifier concerns; named tradeoffs the user accepts (write those into Risks).
+Shared subgraphs in the yaml (declared once): `doc-sync`, `apply-design-rules`, `incomplete-retry`. The `build` scope contract is also in the yaml — pass it verbatim; never hand `build` the full Plan.
 
----
-
-## spec
-
-- **When:** Technical Design exists, no `Spec: <project>` yet.
-- **Needs:** WWW, Pitch, Solution Brief. Do **not** pass Technical Design into compose — spec is repo-agnostic.
-- **Run:** `compose` mode `spec`. Ask product questions until zero. Post when resolved.
-- **Produces:** Linear document `Spec: <project>`.
-- **Stop for:** product questions.
-
----
-
-## plan
-
-- **When:** Spec exists, no `Plan: <project>` yet.
-- **Needs:** Spec + Technical Design.
-- **Run:**
-  1. `investigate` mode `after-spec` — one per configured repo, in parallel.
-  2. Product questions → ask, then doc-sync if the answer changes Spec or Technical Design.
-  3. `compose` mode `plan` with relevant investigation reports.
-  4. Product questions → same treatment. Post when resolved.
-- **Produces:** Linear document `Plan: <project>`.
-- **Stop for:** product questions; doc-sync concerns.
-
----
-
-## slice
-
-- **When:** Spec + Plan exist, no issues reference them yet, **and** the user gave a real yes to "break into issues now?"
-- **Needs:** full Spec + full Plan.
-- **Run:** `slice` once over the whole picture (not per repo). Create Linear issues: scope + named references only; dependency links from the slice order.
-- **Produces:** dependency-ordered issues.
-- **Stop for:** the approval yes (never infer it from docs existing); under-specified plan sections (sync into the Plan first); a refinement that is clearly a new feature (ask before re-slicing).
-
-If issues exist and `sync: done` comments show the Plan has moved since they were cut: report the drift, ask, then re-run `slice` only for what changed.
-
----
-
-## build-issue
-
-- **When:** issues exist and at least one is Todo-equivalent (`unstarted`). Never pick backlog. Never implement the whole Plan because there are no issues — tell the user to run `slice`.
-- **Needs:** that issue's Scope + the named Spec/Plan/TD **sections** only (not the whole Plan, not the whole Technical Design).
-- **Run:**
-  1. Finish any leftover `sync: pending` first.
-  2. `scope-resolver` on those excerpts. Product questions → ask → doc-sync → re-resolve.
-  3. For each repo leg, in order (never parallel): invoke `build` with the scope contract below, then `gate` mode `code` on that leg.
-  4. If the handoff contract `build` actually built differs from the Plan: ask, doc-sync, then continue.
-  5. Final `gate` mode `code` per affected repo, in parallel. Mechanical concerns → scoped `build` re-invocation. Everything else, and every over-implementation finding → ask → doc-sync → repair. At most 3 rounds.
-  6. No `sync: pending` left. Then `repo-ops` one action per call: branch, stage, commit, push, PR. Use `.opencode/repos.md` conventions.
-- **Produces:** PR per affected repo; issue in in-review (never Done).
-- **Stop for:** product questions; over-implementation; no Todo issue (ask — do not promote from backlog); plan gaps that need `slice`.
-
-### Scope contract for `build`
-
-`build` is the built-in agent. Every invocation must state:
-
-- Checklist steps for **this leg only**, the spec excerpt, the repo path.
-- This repo's format and test commands from `.opencode/repos.md`; run format, then tests, report actual output.
-- Ownership test, verbatim: *"Before touching any file, ask: is this change entailed by a checklist step or the issue's scope? If the honest answer is 'not directly, but it's related or convenient,' it's out of scope — leave it alone and report it as an observation instead."*
-- Observations are reported, never fixed.
-- Do **not** stage, commit, push, switch branches, or open a PR — `repo-ops` lands the work.
-- If the leg cannot be completed inside the given scope, stop and report that rather than widening scope.
-- Report: files changed mapped to checklist steps, steps completed vs not, commands and results, the handoff contract actually built, observations.
-
----
-
-## refine
-
-- **When:** Spec + Plan + Technical Design already exist, **and** the user states a requirement or a broken behaviour (UX, "it doesn't work") — not "start this project."
-- **Needs:** those three documents + the user's requirement.
-- **Run:**
-  1. Load Spec, Plan, and Technical Design. Match the requirement to them.
-  2. If the change is a user-facing screen or an API, read `.opencode/design-rules.md`. Ask for the exact full URL if the Routes section does not already have it. Map `localhost:3232` → eventinc, `localhost:4000` → nexus.
-  3. Docs already say it, code doesn't → justified no-change on docs, then implement the delta.
-  4. Docs are silent → `compose` mode `patch` + `gate` mode `patch` (cascade like doc-sync), then implement.
-  5. Docs contradict the user → the user's new word is the decision unless it fights the Solution Brief; if it fights the Brief, ask. Then patch, then implement.
-  6. Implement **only this delta**: `scope-resolver` on the patched sections + the requirement (never the whole Plan) → `build` → `gate` mode `code` → `repo-ops`.
-- **Produces:** patched docs (or a recorded no-change) + a PR for the delta. Comment the decision on a follow-up issue or the issue still in review.
-- **Stop for:** product questions; a change that is clearly a new feature / whole new flow (ask whether to run `slice` instead of a delta build); over-implementation of neighbouring plan work.
-
-Do not re-slice the whole project for a small UX tweak.
+To change a stage, edit [`pipeline.yaml`](pipeline.yaml).

@@ -13,35 +13,38 @@
 
   "agent": {
     "compose": {
-      "model": "opencode-go/mimo-v2.5-pro",
-      "hidden": true
-    },
-    "slice": {
-      "model": "opencode-go/mimo-v2.5-pro",
-      "hidden": true
-    },
-    "gate": {
       "model": "opencode-go/qwen3.7-plus",
       "hidden": true
     },
+    "slice": {
+      "model": "opencode-go/qwen3.7-plus",
+      "hidden": true
+    },
+    "gate": {
+      "model": "opencode-go/mimo-v2.5-pro",
+      "hidden": true
+    },
     "project": {
-      "model": "opencode-go/mimo-v2.5"
+      "model": "opencode-go/qwen3.7-plus"
+    },
+    "incident": {
+      "model": "opencode-go/qwen3.7-plus"
     },
     "investigate": {
-      "model": "opencode-go/mimo-v2.5",
+      "model": "opencode-go/qwen3.7-plus",
       "hidden": true
     },
     "scope-resolver": {
-      "model": "opencode-go/mimo-v2.5",
+      "model": "opencode-go/qwen3.7-plus",
       "hidden": true
     },
     "repo-ops": {
-      "model": "opencode-go/mimo-v2.5",
+      "model": "opencode-go/qwen3.7-plus",
       "hidden": true
     },
     "build": {
       "mode": "all",
-      "model": "opencode-go/mimo-v2.5",
+      "model": "opencode-go/qwen3.7-plus",
       "steps": 15
     }
   }

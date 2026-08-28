@@ -11,7 +11,7 @@ permission:
   websearch: deny
 ---
 
-Read `.opencode/constitution.md` first if you have not this run.
+Read `.opencode/constitution.md` and `.opencode/design-rules.md` first if you have not this run. Follow every design rule.
 
 You break a resolved spec + plan into Linear-ready vertical slices. You do not invent scope the plan does not cover.
 

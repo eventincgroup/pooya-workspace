@@ -5,7 +5,7 @@ description: Fetches the review comments on a PR, works out which ones actually 
 
 # Apply PR review comments
 
-Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run.
+Read `.opencode/constitution.md`, `.opencode/repos.md`, and `.opencode/design-rules.md` first if you have not this run. Follow every design rule.
 
 Turns a PR's review feedback into landed changes: fetch every comment, decide which ones are real work, get that decision approved, then apply. Git goes through `repo-ops` only — one action per call. You do not `git commit` or `git push` yourself.
 

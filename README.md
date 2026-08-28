@@ -1,11 +1,11 @@
 # Agentic Dev Workflow
 
-An OpenCode agent that takes a Linear project from idea to pull request.
+An OpenCode agent that takes a Linear project from idea to pull request — or a standalone incident issue to a PR.
 
 Two rules:
 
 1. **If it is a product choice, it asks you.** It does not guess. If the answer is in the code, it looks there instead of asking.
-2. **Docs stay true.** When something is decided, it updates the Spec, Plan, and Technical Design before it continues. After a build, if you say “this doesn’t work” or want a UX change, it updates those docs first, then fixes only that bit of code.
+2. **Docs stay true.** When something is decided, it updates the Spec, Plan, and Technical Design before it continues. After a build, if you say “this doesn’t work” or want a UX change, it updates those docs first, then fixes only that bit of code. **Incidents** have no project docs: findings and your feedback are commented on the issue.
 
 State lives in Linear. You can close the session and pick up later.
 
@@ -26,7 +26,16 @@ It looks at what already exists in Linear and does the next step:
 
 There is no “continue” command. Switch to `project` again on the same Linear project to resume.
 
-There is no separate “design” agent in Tab. Design is the first **stage** of `project`. To add design rules (for example “always collect full UI/API URLs”), edit [`.opencode/design-rules.md`](.opencode/design-rules.md) — do not add another primary.
+There is no separate “design” agent in Tab. Design is the first **stage** of `project`. To add a design rule that every stage must follow, edit [`.opencode/design-rules.md`](.opencode/design-rules.md) — do not add another primary.
+
+### Incident (one issue, no project)
+
+1. Switch to the **`incident`** agent.
+2. Paste a Linear issue URL or ID.
+
+The issue must already say what is broken, how to see it, and expected vs actual. If it does not, `incident` stops and comments what is missing.
+
+It maps repos, investigates the code, proposes a plan (you confirm those steps), applies it, and opens a PR from the latest default branch without waiting for another yes. Findings and your feedback are commented on the issue.
 
 You do not call the helper agents yourself.
 
@@ -45,26 +54,28 @@ Then:
 1. Put `.opencode/` and `AGENTS.md` next to `eventinc/` and `nexus/`.
 2. Run `opencode` from the workspace root.
 3. The first time it uses Linear, approve OAuth in the browser. The token stays on your machine.
-4. Run `opencode agent list`. You should see `project` and `build (all)`. If `build` says `primary`, see [If it breaks](#if-it-breaks).
+4. Run `opencode agent list`. You should see `project`, `incident`, and `build (all)`. If `build` says `primary`, see [If it breaks](#if-it-breaks).
 
 ## Change how it works
 
 | You want to… | Edit |
 |---|---|
 | Add a repo | [`.opencode/repos.md`](.opencode/repos.md) only |
-| Add a design rule (e.g. collect full UI/API URLs) | [`.opencode/design-rules.md`](.opencode/design-rules.md) |
+| Add a design rule (applies on every stage) | [`.opencode/design-rules.md`](.opencode/design-rules.md) |
+| Change a project stage | [`.opencode/pipeline.yaml`](.opencode/pipeline.yaml) |
+| Change an incident stage | [`.opencode/incident.yaml`](.opencode/incident.yaml) |
+| Change a shared rule | [`.opencode/constitution.md`](.opencode/constitution.md) |
 | Change the Technical Design outline | [`.opencode/templates/technical-design-template.md`](.opencode/templates/technical-design-template.md) |
-| Change a shared rule or stage | [`.opencode/constitution.md`](.opencode/constitution.md) or [`.opencode/pipeline.md`](.opencode/pipeline.md) |
 | Change which model an agent uses | [`opencode.json`](opencode.json) (not the agent files) |
 
 How it is put together: [`.opencode/README.md`](.opencode/README.md).
 
 ## If it breaks
 
-**`build` shows as `primary`, or `project` cannot write code.** Run OpenCode from the workspace root. `opencode.json` must set `agent.build.mode` to `"all"`.
+**`build` shows as `primary`, or `project` / `incident` cannot write code.** Run OpenCode from the workspace root. `opencode.json` must set `agent.build.mode` to `"all"`.
 
 **It has no Linear tools.** Finish OAuth: `opencode mcp list`.
 
 **A model is missing.** `opencode auth`, then `opencode models opencode-go`.
 
-**It will not call a helper agent.** Check with `opencode debug agent project`.
+**It will not call a helper agent.** Check with `opencode debug agent project` or `opencode debug agent incident`.

@@ -1,0 +1,370 @@
+# Pipeline graph. The only full description of stages.
+# `project` walks this file. Do not invent hops. Do not copy this into agent files.
+#
+# Match: first stage in `match_order` whose `when` is true.
+# `refine` is first so it beats greenfield when docs exist and the user states a change.
+#
+# Step kinds: invoke | fanout | interrupt | loop | subgraph | linear
+# Shared subgraphs are declared once and referenced by `kind: subgraph`.
+
+match_order:
+  - refine
+  - design
+  - spec
+  - plan
+  - slice
+  - build-issue
+
+docs:
+  Technical Design: "Technical Design: <project>"
+  Spec: "Spec: <project>"
+  Plan: "Plan: <project>"
+  WWW: WWW
+  Pitch: Pitch
+  Solution Brief: Solution Brief
+
+# Passed verbatim to every `build` invoke. Never hand `build` the full Plan.
+build_scope_contract:
+  - "Checklist steps for this leg only, the spec excerpt, the repo path."
+  - "This repo's format and test commands from `.opencode/repos.md`; run format, then tests, report actual output."
+  - "Follow `.opencode/design-rules.md`."
+  - "Ownership test, verbatim: Before touching any file, ask: is this change entailed by a checklist step or the issue's scope? If the honest answer is 'not directly, but it's related or convenient,' it's out of scope — leave it alone and report it as an observation instead."
+  - "Observations are reported, never fixed."
+  - "Do not stage, commit, push, switch branches, or open a PR — `repo-ops` lands the work."
+  - "If the leg cannot be completed inside the given scope, stop and report that rather than widening scope."
+  - "Report: files changed mapped to checklist steps, steps completed vs not, commands and results, the handoff contract actually built, observations."
+
+subgraphs:
+  incomplete-retry:
+    when: helper status is INCOMPLETE or missing
+    steps:
+      - kind: invoke
+        same: true
+        narrower: true
+        once: true
+      - kind: interrupt
+        for: split_work
+        if: still_incomplete
+    never:
+      - post a document
+      - land a PR
+
+  apply-design-rules:
+    policy: .opencode/design-rules.md
+    steps:
+      - kind: follow
+        file: .opencode/design-rules.md
+        use_collected: true
+        ask_only_missing: true
+      - kind: interrupt
+        for: unmet_design_rules
+        unless: user_says_out_of_scope
+
+  doc-sync:
+    policy: .opencode/constitution.md
+    when: a decision (user ruling, accepted tradeoff, contract that differs from the Plan, over-implementation ruling)
+    steps:
+      - kind: linear
+        record: "sync: pending"
+      - kind: invoke
+        agent: compose
+        mode: patch
+      - kind: loop
+        cap: 3
+        until: cascade_complete
+        steps:
+          - kind: invoke
+            agent: compose
+            mode: patch
+      - kind: invoke
+        agent: gate
+        mode: patch
+      - kind: linear
+        apply: patches
+      - kind: linear
+        record: "sync: done"
+
+stages:
+  refine:
+    when:
+      all:
+        - has_doc: Technical Design
+        - has_doc: Spec
+        - has_doc: Plan
+        - user_states_change: true
+    needs:
+      - Technical Design
+      - Spec
+      - Plan
+      - user_requirement
+    produces:
+      - patched docs or recorded no-change
+      - PR for the delta
+      - comment on a follow-up issue or the issue still in review
+    notes:
+      - Do not re-slice the whole project for a small UX tweak.
+    steps:
+      - kind: linear
+        load: [Spec, Plan, Technical Design]
+        match: user_requirement
+      - kind: subgraph
+        use: apply-design-rules
+      - kind: branch
+        if: docs_already_say_it
+        then:
+          - kind: linear
+            record: justified_no_change
+        else_if: docs_silent
+        then:
+          - kind: subgraph
+            use: doc-sync
+        else_if: docs_contradict_user
+        then:
+          - kind: interrupt
+            for: fights_solution_brief
+            unless: user_word_wins
+          - kind: subgraph
+            use: doc-sync
+      - kind: invoke
+        agent: scope-resolver
+        with: [patched_sections, user_requirement]
+        never: full_Plan
+      - kind: interrupt
+        for: product_questions
+        then: [doc-sync, re-resolve]
+      - kind: invoke
+        agent: build
+        with: build_scope_contract
+      - kind: invoke
+        agent: gate
+        mode: code
+      - kind: invoke
+        agent: repo-ops
+        one_action_per_call: [branch, stage, commit, push, pr]
+    stop_for:
+      - product_questions
+      - new_feature_or_whole_new_flow
+      - over_implementation
+
+  design:
+    when:
+      any:
+        - missing_doc: Technical Design
+        - user_asked_revisit: Technical Design
+    needs:
+      - WWW
+      - Pitch
+      - Solution Brief
+    solution_brief: authoritative
+    produces:
+      - doc: Technical Design
+    notes:
+      - "First authoring may replace the whole document; carry forward every sync:done decision."
+    steps:
+      - kind: fanout
+        agent: investigate
+        mode: before-spec
+        per: configured_repo
+        parallel: true
+      - kind: interrupt
+        for: product_questions
+        on_code_questions:
+          kind: invoke
+          agent: investigate
+      - kind: subgraph
+        use: apply-design-rules
+      - kind: invoke
+        agent: compose
+        mode: td
+        with:
+          template: .opencode/templates/technical-design-template.md
+          design_rules_collected: true
+          read_template_fresh: true
+      - kind: interrupt
+        for: review_draft
+      - kind: loop
+        cap: 3
+        until: no_concerns
+        on_concerns: decisions
+        steps:
+          - kind: fanout
+            agent: gate
+            mode: design
+            per: affected_repo
+            parallel: true
+            also_check: design-rules
+          - kind: interrupt
+            for: verifier_concerns
+          - kind: invoke
+            agent: compose
+            mode: td
+      - kind: linear
+        post: Technical Design
+    stop_for:
+      - product_questions
+      - unmet_design_rules
+      - verifier_concerns
+      - named_tradeoffs
+
+  spec:
+    when:
+      all:
+        - has_doc: Technical Design
+        - missing_doc: Spec
+    needs:
+      - WWW
+      - Pitch
+      - Solution Brief
+    never_pass:
+      - Technical Design
+    produces:
+      - doc: Spec
+    steps:
+      - kind: invoke
+        agent: compose
+        mode: spec
+      - kind: interrupt
+        for: product_questions
+        until: zero
+      - kind: linear
+        post: Spec
+    stop_for:
+      - product_questions
+
+  plan:
+    when:
+      all:
+        - has_doc: Spec
+        - missing_doc: Plan
+    needs:
+      - Spec
+      - Technical Design
+    produces:
+      - doc: Plan
+    steps:
+      - kind: fanout
+        agent: investigate
+        mode: after-spec
+        per: configured_repo
+        parallel: true
+      - kind: interrupt
+        for: product_questions
+        then: doc-sync
+      - kind: invoke
+        agent: compose
+        mode: plan
+        with: relevant_investigate_reports
+      - kind: interrupt
+        for: product_questions
+        then: doc-sync
+      - kind: linear
+        post: Plan
+    stop_for:
+      - product_questions
+      - doc_sync_concerns
+
+  slice:
+    when:
+      all:
+        - has_doc: Spec
+        - has_doc: Plan
+        - no_issues_referencing_docs: true
+    needs:
+      - Spec
+      - Plan
+    produces:
+      - dependency_ordered_issues
+    notes:
+      - "If issues exist and sync:done comments show the Plan has moved: report the drift, ask, then re-run slice only for what changed."
+    steps:
+      - kind: interrupt
+        for: slice_yes
+        never_infer_from: docs_existing
+      - kind: interrupt
+        for: under_specified_plan
+        then: doc-sync
+      - kind: invoke
+        agent: slice
+        once: true
+        not_per_repo: true
+      - kind: linear
+        create_issues:
+          include: [scope, named_references]
+          never: copied_spec_or_plan_content
+          dependency_links: slice_order
+    stop_for:
+      - slice_yes
+      - under_specified_plan
+      - new_feature_refinement
+
+  build-issue:
+    when:
+      has_todo_issue: true
+    never:
+      - pick backlog
+      - implement the whole Plan because there are no issues
+    if_no_todo:
+      interrupt: no_todo_issue
+      tell_user: run slice
+    needs:
+      - issue_scope
+      - named_spec_plan_td_sections
+    never_pass:
+      - full Plan
+      - full Technical Design
+    produces:
+      - PR per affected repo
+      - issue_status: in-review
+    never_set:
+      - issue Done
+    steps:
+      - kind: subgraph
+        use: doc-sync
+        if: leftover_sync_pending
+      - kind: invoke
+        agent: scope-resolver
+        with: named_excerpts
+      - kind: interrupt
+        for: product_questions
+        then: [doc-sync, re-resolve]
+      - kind: fanout
+        per: repo_leg
+        parallel: false
+        steps:
+          - kind: invoke
+            agent: build
+            with: build_scope_contract
+          - kind: invoke
+            agent: gate
+            mode: code
+      - kind: interrupt
+        for: handoff_differs_from_plan
+        then: doc-sync
+      - kind: loop
+        cap: 3
+        until: no_concerns
+        steps:
+          - kind: fanout
+            agent: gate
+            mode: code
+            per: affected_repo
+            parallel: true
+          - kind: invoke
+            agent: build
+            if: mechanical_concerns
+            scoped: true
+          - kind: interrupt
+            for: [other_concerns, over_implementation]
+            then: [doc-sync, repair]
+      - kind: subgraph
+        use: doc-sync
+        if: leftover_sync_pending
+      - kind: invoke
+        agent: repo-ops
+        one_action_per_call: [branch, stage, commit, push, pr]
+        conventions: .opencode/repos.md
+    stop_for:
+      - product_questions
+      - over_implementation
+      - no_todo_issue
+      - plan_gaps_need_slice

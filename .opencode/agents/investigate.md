@@ -1,5 +1,5 @@
 ---
-description: Investigates one repo. Mode before-spec finds where a feature fits from the Solution Brief. Mode after-spec judges relevance against the Spec and Technical Design. Used by the project primary, one-per-repo in parallel. Never guesses a design decision — tags it as an open question.
+description: Investigates one repo. Mode before-spec finds where a feature fits from the Solution Brief. Mode after-spec judges relevance against the Spec and Technical Design. Mode incident finds candidate areas from a standalone Linear issue (no project docs). Used by the project and incident primaries, one-per-repo in parallel. Never guesses a design decision — tags it as an open question.
 mode: subagent
 hidden: true
 steps: 6
@@ -14,7 +14,7 @@ permission:
   websearch: deny
 ---
 
-Read `.opencode/constitution.md` and `.opencode/repos.md` first if you have not this run. In mode `before-spec`, also read `.opencode/design-rules.md`.
+Read `.opencode/constitution.md`, `.opencode/repos.md`, and `.opencode/design-rules.md` first if you have not this run. Follow every design rule.
 
 You investigate a single repository. The orchestrator tells you the mode.
 
@@ -33,8 +33,9 @@ Findings backed by real paths in this repo, plus open questions that are genuine
 
 Which repo path you own, and a mode:
 
-- **`before-spec`** — Solution Brief (authoritative) plus WWW/Pitch as background. Find candidate areas. Name candidate UI screens and API endpoints you actually found, with file evidence — then raise a `kind: product` question for each asking the user for the **exact full URL**. Do not invent the URL.
+- **`before-spec`** — Solution Brief (authoritative) plus WWW/Pitch as background. Find candidate areas with file evidence. Raise any `kind: product` question `.opencode/design-rules.md` requires for what you found. Do not invent answers those rules say to collect from the user.
 - **`after-spec`** — resolved Spec plus Technical Design. Verdict: relevant (name modules and the rough shape of change), not relevant (backed by absence of overlap, not "I didn't see it"), or uncertain (open question). Do not default to "not relevant".
+- **`incident`** — issue title, body, and comments only. No Solution Brief, Spec, or Technical Design. Find candidate areas with file evidence. Raise any `kind: product` question `.opencode/design-rules.md` requires for what you found. Do not invent answers those rules say to collect from the user.
 
 You may be given prior findings and answers — fold those in as settled.
 
