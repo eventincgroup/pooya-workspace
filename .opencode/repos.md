@@ -1,6 +1,6 @@
 # Configured repos
 
-The only repo list for this pipeline. Primaries, subagents, and `apply-pr-comments` all read this file. To add a repo, edit this file — nowhere else.
+The only repo list for this pipeline. Primaries (`project`, `incident`), subagents, and `apply-pr-comments` all read this file. To add a repo, edit this file — nowhere else.
 
 ## Integration surface
 

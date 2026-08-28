@@ -16,7 +16,7 @@ A task or prompt may explicitly or implicitly reference one or more sub-director
 
 If the prompt does not mention any project by name and the task is not trivially scoped to the current open file, **you must ask the user which codebase(s) the task applies to**. Never assume or guess.
 
-**Exception — Linear projects.** If the user names or links a Linear project (or is clearly running the OpenCode project pipeline), do not ask which codebase. Use the pipeline's configured repos in `.opencode/repos.md` (`eventinc` and `nexus` today).
+**Exception — Linear projects and incidents.** If the user names or links a Linear project (or is clearly running the OpenCode **project** pipeline), do not ask which codebase. Use the pipeline's configured repos in `.opencode/repos.md` (`eventinc` and `nexus` today). If they name or link a Linear **issue** and are running the **incident** agent, use that issue plus the same repo list.
 
 ### 3. Follow codebase-specific instructions
 
@@ -49,4 +49,4 @@ When a task spans multiple codebases:
 ### Usage notes
 
 - **architecture-reference**: Read-only documentation. Do not edit unless explicitly asked.
-- **Linear-to-PR pipeline**: `.opencode/` — constitution, repos, `pipeline.yaml` (the graph), and design-rules files, plus the `project` agent (a runner, not an interpreter). Design is a pipeline stage, not a Tab agent. Every stage follows `.opencode/design-rules.md`; add a heading there to add a rule. Change a stage in `.opencode/pipeline.yaml`. Configured repos for that pipeline are only those listed in `.opencode/repos.md`.
+- **Linear-to-PR pipeline**: `.opencode/` — constitution, repos, `pipeline.yaml` (project graph), `incident.yaml` (incident graph), and design-rules files, plus the `project` and `incident` agents (runners, not interpreters). Design is a project stage, not a Tab agent. Every stage follows `.opencode/design-rules.md`; add a heading there to add a rule. Change a project stage in `.opencode/pipeline.yaml`; change an incident stage in `.opencode/incident.yaml`. Configured repos are only those listed in `.opencode/repos.md`.

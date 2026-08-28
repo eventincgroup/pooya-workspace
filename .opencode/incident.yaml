@@ -1,0 +1,255 @@
+# Incident graph. The only full description of incident stages.
+# `incident` walks this file. Do not invent hops. Do not copy this into agent files.
+# No Linear project. No Spec / Plan / Technical Design. State is the issue + comments.
+#
+# Match: first stage in `match_order` whose `when` is true.
+# Each stage through **plan** ends with the `issue-comment` subgraph (confirm).
+# After a green apply, comment the result and open the PR — do not wait for confirm.
+#
+# Step kinds: invoke | fanout | interrupt | loop | subgraph | linear | follow
+
+match_order:
+  - intake
+  - map-repos
+  - investigate
+  - plan
+  - apply
+  - pr
+
+comment_tags:
+  intake: "incident: intake"
+  map-repos: "incident: map-repos"
+  investigate: "incident: investigate"
+  plan: "incident: plan"
+  apply: "incident: apply"
+  pr: "incident: pr"
+
+# Passed verbatim to every `build` invoke. Scope is the issue body plus the confirmed plan comment.
+build_scope_contract:
+  - "Checklist steps for this leg only, the confirmed plan comment, the repo path."
+  - "This repo's format and test commands from `.opencode/repos.md`; run format, then tests, report actual output."
+  - "Follow `.opencode/design-rules.md`."
+  - "Ownership test, verbatim: Before touching any file, ask: is this change entailed by a checklist step or the issue's scope? If the honest answer is 'not directly, but it's related or convenient,' it's out of scope — leave it alone and report it as an observation instead."
+  - "Observations are reported, never fixed."
+  - "Do not stage, commit, push, switch branches, or open a PR — `repo-ops` lands the work."
+  - "If the leg cannot be completed inside the given scope, stop and report that rather than widening scope."
+  - "Report: files changed mapped to checklist steps, steps completed vs not, commands and results, the handoff contract actually built, observations."
+
+subgraphs:
+  incomplete-retry:
+    when: helper status is INCOMPLETE or missing
+    steps:
+      - kind: invoke
+        same: true
+        narrower: true
+        once: true
+      - kind: interrupt
+        for: split_work
+        if: still_incomplete
+    never:
+      - land a PR
+
+  apply-design-rules:
+    policy: .opencode/design-rules.md
+    steps:
+      - kind: follow
+        file: .opencode/design-rules.md
+        use_collected: true
+        ask_only_missing: true
+        write_routes_to: issue_comment
+      - kind: interrupt
+        for: unmet_design_rules
+        unless: user_says_out_of_scope
+
+  issue-comment:
+    steps:
+      - kind: linear
+        comment: proposed_findings
+        tag: current_stage
+      - kind: interrupt
+        for: confirm_findings
+        user_may_add_context: true
+      - kind: linear
+        comment: confirmation_and_extra_context
+        tag: current_stage
+        include: [user_feedback]
+    resume: read issue comments
+
+stages:
+  intake:
+    when:
+      missing_comment_tag: intake
+    needs:
+      - issue
+      - issue_comments
+    produces:
+      - comment: intake
+    enough_context:
+      - what is broken
+      - how to see it (route or repro)
+      - expected vs actual
+    steps:
+      - kind: linear
+        load: [issue, issue_comments]
+      - kind: branch
+        if: enough_context
+        then:
+          - kind: subgraph
+            use: issue-comment
+        else:
+          - kind: linear
+            comment: what_is_missing
+            tag: intake
+          - kind: interrupt
+            for: missing_context
+            never_guess: true
+    stop_for:
+      - missing_context
+
+  map-repos:
+    when:
+      all:
+        - has_comment_tag: intake
+        - missing_comment_tag: map-repos
+    needs:
+      - issue
+      - intake_comment
+    produces:
+      - comment: map-repos
+      - repos: [eventinc, nexus, both]
+    steps:
+      - kind: fanout
+        agent: investigate
+        mode: incident
+        per: configured_repo
+        parallel: true
+      - kind: subgraph
+        use: apply-design-rules
+      - kind: linear
+        propose: eventinc_or_nexus_or_both
+      - kind: subgraph
+        use: issue-comment
+    stop_for:
+      - product_questions
+      - unmet_design_rules
+      - confirm_findings
+
+  investigate:
+    when:
+      all:
+        - has_comment_tag: map-repos
+        - missing_comment_tag: investigate
+    needs:
+      - issue
+      - confirmed_repos
+      - map-repos_comment
+    produces:
+      - comment: investigate
+    steps:
+      - kind: fanout
+        agent: investigate
+        mode: incident
+        per: confirmed_repo
+        parallel: true
+      - kind: subgraph
+        use: issue-comment
+    stop_for:
+      - product_questions
+      - confirm_findings
+
+  plan:
+    when:
+      all:
+        - has_comment_tag: investigate
+        - missing_comment_tag: plan
+    needs:
+      - issue
+      - investigate_comment
+      - confirmed_repos
+    produces:
+      - comment: plan
+    notes:
+      - Short plan. What changes where. Files you actually saw. No Linear Plan document.
+    steps:
+      - kind: linear
+        draft: plan
+        from: [issue, investigate_comment]
+      - kind: subgraph
+        use: issue-comment
+    stop_for:
+      - confirm_findings
+
+  apply:
+    when:
+      all:
+        - has_comment_tag: plan
+        - missing_comment_tag: apply
+    needs:
+      - issue
+      - confirmed_plan_comment
+      - confirmed_repos
+    produces:
+      - comment: apply
+    steps:
+      - kind: invoke
+        agent: scope-resolver
+        with: [issue, confirmed_plan_comment]
+      - kind: interrupt
+        for: product_questions
+        then: issue-comment
+      - kind: fanout
+        per: repo_leg
+        parallel: false
+        steps:
+          - kind: invoke
+            agent: build
+            with: build_scope_contract
+          - kind: invoke
+            agent: gate
+            mode: code
+      - kind: loop
+        cap: 3
+        until: no_concerns
+        steps:
+          - kind: invoke
+            agent: build
+            if: mechanical_concerns
+            scoped: true
+          - kind: interrupt
+            for: [other_concerns, over_implementation]
+            then: issue-comment
+      - kind: linear
+        comment: apply_result
+        tag: apply
+    stop_for:
+      - product_questions
+      - over_implementation
+
+  pr:
+    when:
+      all:
+        - has_comment_tag: apply
+        - missing_comment_tag: pr
+    needs:
+      - apply_comment
+      - confirmed_repos
+    produces:
+      - PR per affected repo
+      - issue_status: in-review
+    never_set:
+      - issue Done
+    steps:
+      - kind: fanout
+        per: affected_repo
+        parallel: false
+        steps:
+          - kind: invoke
+            agent: repo-ops
+            action: update_from_origin_head
+          - kind: invoke
+            agent: repo-ops
+            one_action_per_call: [branch, stage, commit, push, pr]
+            conventions: .opencode/repos.md
+      - kind: linear
+        comment: pr_urls
+        tag: pr

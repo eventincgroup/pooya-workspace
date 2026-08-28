@@ -1,16 +1,17 @@
 # How the pipeline is built
 
-Declared files are the source of truth. Agent files only describe a job (goal, inputs, outputs). They do not repeat the rules. Add a design constraint in [`design-rules.md`](design-rules.md) — every stage follows that file; you do not need a second Tab agent.
+Declared files are the source of truth. Agent files only describe a job (goal, inputs, outputs). They do not repeat the rules. Add a design constraint in [`design-rules.md`](design-rules.md) — every stage follows that file.
 
 | File | Role |
 |---|---|
 | [`constitution.md`](constitution.md) | Shared rules: ask vs look in code, status line, 3-round cap |
 | [`repos.md`](repos.md) | Repos, local URLs (`3232` = eventinc, `4000` = nexus), git style |
-| [`pipeline.yaml`](pipeline.yaml) | The graph: when to run, steps, what to produce, when to stop |
-| [`pipeline.md`](pipeline.md) | Short index of stages. Points at the yaml. |
+| [`pipeline.yaml`](pipeline.yaml) | Project graph: when to run, steps, what to produce, when to stop |
+| [`pipeline.md`](pipeline.md) | Short index of project stages. Points at the yaml. |
+| [`incident.yaml`](incident.yaml) | Incident graph: one issue, no project. Confirm through the plan; then apply and PR. |
 | [`design-rules.md`](design-rules.md) | Always-on design constraints (every stage). Add a heading to add a rule. |
 
-The **`project`** agent reads Linear, walks [`pipeline.yaml`](pipeline.yaml), and runs the matching stage. It does not invent hops. Helpers never talk to you or to Linear.
+The **`project`** agent reads Linear, walks [`pipeline.yaml`](pipeline.yaml), and runs the matching stage. The **`incident`** agent walks [`incident.yaml`](incident.yaml) for a standalone issue. Neither invents hops. Helpers never talk to you or to Linear.
 
 ```mermaid
 flowchart TD
@@ -23,13 +24,17 @@ flowchart TD
     Stage -->|"no Plan"| Plan["plan"]
     Stage -->|"you said yes to issues"| Slice["slice"]
     Stage -->|"a Todo issue"| BuildIssue["build that issue"]
+    User2["You paste a Linear issue"] --> Incident["incident runner"]
+    Incident --> IncFiles["constitution + repos + incident.yaml + design-rules"]
+    IncFiles --> IncStage["intake then map, investigate, plan, apply, PR"]
 ```
 
 ## Agents
 
 | Agent | Job |
 |---|---|
-| `project` | Talks to you and Linear. Walks the yaml. |
+| `project` | Talks to you and Linear. Walks `pipeline.yaml`. |
+| `incident` | Talks to you and Linear. Walks `incident.yaml` for one issue, no project. |
 | `investigate` | Reads one repo. |
 | `compose` | Writes or patches a document. |
 | `gate` | Checks a design, a patch, or the code. |
@@ -38,7 +43,7 @@ flowchart TD
 | `build` | Writes the code (built-in OpenCode agent). |
 | `repo-ops` | One git or GitHub action per call. Only this agent may touch git. |
 
-`project` may only call the helpers listed in its allowlist. `build` can use every tool, so it is *told* not to touch git; `gate` checks that it didn’t.
+`project` and `incident` may only call the helpers listed in their allowlists. `build` can use every tool, so it is *told* not to touch git; `gate` checks that it didn’t.
 
 ## Stages
 
@@ -51,12 +56,14 @@ Full detail is in [`pipeline.yaml`](pipeline.yaml). Short index: [`pipeline.md`]
 - **build-issue** — next Todo issue only (never backlog). Builds one repo at a time. Opens a PR. Never marks the issue Done.
 - **refine** — after a build, when you report UX or “it doesn’t work”. Updates Spec / Plan / Design if needed, then changes only that bit of code.
 
+Incident stages (full detail: [`incident.yaml`](incident.yaml)): **intake** → **map-repos** → **investigate** → **plan** → **apply** → **pr**. Confirm and comment through the plan; after a green apply, open the PR without waiting. Branch from latest `origin/HEAD`.
+
 ## Config
 
 [`opencode.json`](../opencode.json) lives at the **workspace root**, not inside `.opencode/`. It holds:
 
 - Linear (OAuth)
-- `agent.build.mode: "all"` — required, or `project` cannot write code
+- `agent.build.mode: "all"` — required, or `project` / `incident` cannot write code
 - Each agent’s model
 
 Models are only set in that file. Agent markdown has no `model:` line.
