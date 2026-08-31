@@ -41,20 +41,45 @@ You do not call the helper agents yourself.
 
 ## Setup
 
+Do not clone this whole workspace. Clone `eventinc` and `nexus` as siblings, then add this plugin in `opencode.json` at that folder.
+
 You need:
 
 - OpenCode 1.18.18 or newer (`opencode --version`)
 - Linear access
 - `gh` logged in (`gh auth status`)
 - The `opencode-go` models
-- `eventinc` and `nexus` as folders next to this repo
+- `eventinc` and `nexus` cloned as folders in the same directory
+
+Layout:
+
+```text
+your-workspace/          ← start OpenCode here, not inside either repo
+  opencode.json
+  eventinc/
+  nexus/
+```
+
+`opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "@eventincgroup/opencode-pipeline@git+ssh://git@github.com/eventincgroup/pooya-workspace.git"
+  ]
+}
+```
+
+On startup the plugin writes `.opencode/` (agents, `repos.md`, pipeline graphs) and fills in Linear MCP, models, and `agent.build.mode`. Do not copy those files yourself. Do not edit the synced `.opencode/` files — they are overwritten on each start; change this repo instead.
 
 Then:
 
-1. Put `.opencode/` and `AGENTS.md` next to `eventinc/` and `nexus/`.
-2. Run `opencode` from the workspace root.
-3. The first time it uses Linear, approve OAuth in the browser. The token stays on your machine.
-4. Run `opencode agent list`. You should see `project`, `incident`, and `build (all)`. If `build` says `primary`, see [If it breaks](#if-it-breaks).
+1. Run `opencode` from that workspace root.
+2. The first time it uses Linear, approve OAuth in the browser. The token stays on your machine.
+3. Run `opencode agent list`. You should see `project`, `incident`, and `build (all)`. If `build` says `primary`, see [If it breaks](#if-it-breaks).
+
+If that folder is a git repo and you do not want to commit the generated `.opencode/` directory, add `.opencode/` to `.gitignore`. If it is just a directory of two clones, skip this — gitignore does not apply.
 
 ## Change how it works
 

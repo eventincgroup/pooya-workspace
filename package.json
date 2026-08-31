@@ -1,0 +1,30 @@
+{
+  "name": "@eventincgroup/opencode-pipeline",
+  "version": "0.1.0",
+  "description": "OpenCode Linear project and incident pipeline for eventinc and nexus",
+  "type": "module",
+  "main": ".opencode/plugins/pipeline.js",
+  "files": [
+    ".opencode/agents",
+    ".opencode/plugins",
+    ".opencode/skills",
+    ".opencode/templates",
+    ".opencode/README.md",
+    ".opencode/constitution.md",
+    ".opencode/design-rules.md",
+    ".opencode/incident.yaml",
+    ".opencode/pipeline.md",
+    ".opencode/pipeline.yaml",
+    ".opencode/repos.md",
+    "opencode.json",
+    "README.md"
+  ],
+  "keywords": ["opencode-plugin"],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/eventincgroup/pooya-workspace.git"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.18.18"
+  }
+}
